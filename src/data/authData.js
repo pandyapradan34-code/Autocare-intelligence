@@ -15,7 +15,7 @@ export const dummyUsers = [
   {
     id: "admin-001",
     role: "admin",
-    name: "Pradan pandya",
+    name: "Pradan Pandya",
     email: "admin@demo.com",
     password: "admin123",
     phone: "+91 91234 56789",
