@@ -1,5 +1,6 @@
 import { Link } from "react-router-dom";
-import { Gauge, Activity, Wrench, LineChart, ShieldCheck, ArrowRight } from "lucide-react";
+import { Activity, Wrench, LineChart, ShieldCheck, ArrowRight } from "lucide-react";
+import Logo from "../components/common/Logo";
 
 /**
  * Simple public landing page introducing the product before login.
@@ -8,12 +9,7 @@ export default function Landing() {
   return (
     <div className="min-h-screen bg-white">
       <header className="mx-auto flex max-w-6xl items-center justify-between px-6 py-5">
-        <div className="flex items-center gap-2">
-          <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-brand-600 text-white">
-            <Gauge size={20} />
-          </div>
-          <span className="text-lg font-bold text-slate-900">AutoCare Intelligence</span>
-        </div>
+        <Logo theme="light" className="h-16 w-auto" />
         <div className="flex items-center gap-3">
           <Link to="/login" className="text-sm font-medium text-slate-600 hover:text-slate-900">
             Login

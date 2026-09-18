@@ -1,5 +1,6 @@
 import { Outlet, Link } from "react-router-dom";
-import { Gauge, ShieldCheck, LineChart, Wrench } from "lucide-react";
+import { ShieldCheck, LineChart, Wrench } from "lucide-react";
+import Logo from "../components/common/Logo";
 
 /**
  * Shared shell for Login / Register / Forgot Password pages —
@@ -9,11 +10,8 @@ export default function AuthLayout() {
   return (
     <div className="flex min-h-screen bg-slate-50">
       <div className="relative hidden w-1/2 flex-col justify-between overflow-hidden bg-gradient-to-br from-brand-800 via-brand-700 to-brand-900 p-10 text-white lg:flex">
-        <Link to="/" className="flex items-center gap-2">
-          <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-white/15">
-            <Gauge size={20} />
-          </div>
-          <span className="text-lg font-bold">AutoCare Intelligence</span>
+        <Link to="/" className="inline-flex w-fit items-center">
+          <Logo theme="dark" glow animated className="h-24 w-auto" />
         </Link>
 
         <div className="max-w-md">
@@ -43,11 +41,8 @@ export default function AuthLayout() {
 
       <div className="flex w-full flex-1 items-center justify-center p-6 sm:p-10 lg:w-1/2">
         <div className="w-full max-w-sm">
-          <div className="mb-8 flex items-center gap-2 lg:hidden">
-            <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-brand-600 text-white">
-              <Gauge size={20} />
-            </div>
-            <span className="text-lg font-bold text-slate-900">AutoCare Intelligence</span>
+          <div className="mb-8 flex justify-center">
+            <Logo theme="light" animated className="h-24 w-auto" />
           </div>
           <Outlet />
         </div>

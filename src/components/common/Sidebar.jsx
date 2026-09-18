@@ -1,5 +1,6 @@
 import { NavLink } from "react-router-dom";
-import { Gauge, X } from "lucide-react";
+import { X } from "lucide-react";
+import Logo from "./Logo";
 import { cx } from "../../utils/formatters";
 
 /**
@@ -25,15 +26,10 @@ export default function Sidebar({ items, brandLabel, open, onClose }) {
           open ? "translate-x-0" : "-translate-x-full"
         )}
       >
-        <div className="flex h-16 shrink-0 items-center justify-between border-b border-slate-100 px-5">
-          <div className="flex items-center gap-2">
-            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-brand-600 text-white">
-              <Gauge size={18} />
-            </div>
-            <div className="leading-tight">
-              <p className="text-sm font-bold text-slate-900">AutoCare</p>
-              <p className="text-[11px] font-medium text-slate-400">{brandLabel}</p>
-            </div>
+        <div className="flex h-20 shrink-0 items-center justify-between border-b border-slate-100 px-5">
+          <div className="flex items-center gap-3">
+            <Logo theme="light" showTagline={false} className="h-14 w-auto" />
+            <p className="text-[11px] font-medium leading-tight text-slate-400">{brandLabel}</p>
           </div>
           <button
             className="rounded-lg p-1.5 text-slate-400 hover:bg-slate-100 lg:hidden"
