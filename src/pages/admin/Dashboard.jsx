@@ -1,22 +1,24 @@
 import { Users, Car, ClipboardList, AlertTriangle } from "lucide-react";
 import PageHeader from "../../components/common/PageHeader";
 import StatCard from "../../components/common/StatCard";
-import { adminOverview, recentServices, criticalAlerts } from "../../data/adminDashboardData";
+import { useAdminData } from "../../context/AdminDataContext";
 import { formatCurrency, formatDate } from "../../utils/formatters";
 import { AlertOctagon } from "lucide-react";
 
 export default function AdminDashboard() {
+  const { overview, recentServices, criticalAlerts } = useAdminData();
+
   return (
     <div>
       <PageHeader title="Admin Dashboard" description="Fleet-wide overview across all customers and vehicles." />
 
       <div className="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <StatCard label="Total Customers" value={adminOverview.totalCustomers} icon={Users} tone="brand" />
-        <StatCard label="Total Vehicles" value={adminOverview.totalVehicles} icon={Car} tone="emerald" />
-        <StatCard label="Total Services" value={adminOverview.totalServices} icon={ClipboardList} tone="slate" />
+        <StatCard label="Total Customers" value={overview.totalCustomers} icon={Users} tone="brand" />
+        <StatCard label="Total Vehicles" value={overview.totalVehicles} icon={Car} tone="emerald" />
+        <StatCard label="Total Services" value={overview.totalServices} icon={ClipboardList} tone="slate" />
         <StatCard
           label="Vehicles Requiring Attention"
-          value={adminOverview.vehiclesRequiringAttention}
+          value={overview.vehiclesRequiringAttention}
           icon={AlertTriangle}
           tone="red"
         />

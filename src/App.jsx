@@ -1,5 +1,6 @@
 import { Routes, Route, Navigate } from "react-router-dom";
 import { AuthProvider } from "./context/AuthContext";
+import { AdminDataProvider } from "./context/AdminDataContext";
 import ProtectedRoute from "./routes/ProtectedRoute";
 
 import AuthLayout from "./layouts/AuthLayout";
@@ -37,60 +38,62 @@ import NotFound from "./pages/NotFound";
 export default function App() {
   return (
     <AuthProvider>
-      <Routes>
-        {/* Public routes */}
-        <Route path="/" element={<Landing />} />
-        <Route element={<AuthLayout />}>
-          <Route path="/login" element={<Login />} />
-          <Route path="/register" element={<Register />} />
-          <Route path="/forgot-password" element={<ForgotPassword />} />
-        </Route>
+      <AdminDataProvider>
+        <Routes>
+          {/* Public routes */}
+          <Route path="/" element={<Landing />} />
+          <Route element={<AuthLayout />}>
+            <Route path="/login" element={<Login />} />
+            <Route path="/register" element={<Register />} />
+            <Route path="/forgot-password" element={<ForgotPassword />} />
+          </Route>
 
-        {/* Customer routes */}
-        <Route
-          path="/customer"
-          element={
-            <ProtectedRoute allowedRole="customer">
-              <CustomerLayout />
-            </ProtectedRoute>
-          }
-        >
-          <Route index element={<Navigate to="dashboard" replace />} />
-          <Route path="dashboard" element={<CustomerDashboard />} />
-          <Route path="car" element={<MyCar />} />
-          <Route path="health" element={<VehicleHealth />} />
-          <Route path="component-health" element={<ComponentHealth />} />
-          <Route path="service-history" element={<ServiceHistory />} />
-          <Route path="next-service" element={<NextService />} />
-          <Route path="life-expectancy" element={<LifeExpectancy />} />
-          <Route path="recommendations" element={<Recommendations />} />
-          <Route path="maintenance" element={<MaintenanceCost />} />
-          <Route path="profile" element={<CustomerProfile />} />
-        </Route>
+          {/* Customer routes */}
+          <Route
+            path="/customer"
+            element={
+              <ProtectedRoute allowedRole="customer">
+                <CustomerLayout />
+              </ProtectedRoute>
+            }
+          >
+            <Route index element={<Navigate to="dashboard" replace />} />
+            <Route path="dashboard" element={<CustomerDashboard />} />
+            <Route path="car" element={<MyCar />} />
+            <Route path="health" element={<VehicleHealth />} />
+            <Route path="component-health" element={<ComponentHealth />} />
+            <Route path="service-history" element={<ServiceHistory />} />
+            <Route path="next-service" element={<NextService />} />
+            <Route path="life-expectancy" element={<LifeExpectancy />} />
+            <Route path="recommendations" element={<Recommendations />} />
+            <Route path="maintenance" element={<MaintenanceCost />} />
+            <Route path="profile" element={<CustomerProfile />} />
+          </Route>
 
-        {/* Admin routes */}
-        <Route
-          path="/admin"
-          element={
-            <ProtectedRoute allowedRole="admin">
-              <AdminLayout />
-            </ProtectedRoute>
-          }
-        >
-          <Route index element={<Navigate to="dashboard" replace />} />
-          <Route path="dashboard" element={<AdminDashboard />} />
-          <Route path="customers" element={<Customers />} />
-          <Route path="vehicles" element={<Vehicles />} />
-          <Route path="services" element={<ServiceRecords />} />
-          <Route path="services/add" element={<AddService />} />
-          <Route path="health" element={<HealthOverview />} />
-          <Route path="maintenance" element={<MaintenanceAnalysis />} />
-          <Route path="reports" element={<Reports />} />
-          <Route path="profile" element={<AdminProfile />} />
-        </Route>
+          {/* Admin routes */}
+          <Route
+            path="/admin"
+            element={
+              <ProtectedRoute allowedRole="admin">
+                <AdminLayout />
+              </ProtectedRoute>
+            }
+          >
+            <Route index element={<Navigate to="dashboard" replace />} />
+            <Route path="dashboard" element={<AdminDashboard />} />
+            <Route path="customers" element={<Customers />} />
+            <Route path="vehicles" element={<Vehicles />} />
+            <Route path="services" element={<ServiceRecords />} />
+            <Route path="services/add" element={<AddService />} />
+            <Route path="health" element={<HealthOverview />} />
+            <Route path="maintenance" element={<MaintenanceAnalysis />} />
+            <Route path="reports" element={<Reports />} />
+            <Route path="profile" element={<AdminProfile />} />
+          </Route>
 
-        <Route path="*" element={<NotFound />} />
-      </Routes>
+          <Route path="*" element={<NotFound />} />
+        </Routes>
+      </AdminDataProvider>
     </AuthProvider>
   );
 }

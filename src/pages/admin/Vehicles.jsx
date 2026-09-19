@@ -3,12 +3,13 @@ import PageHeader from "../../components/common/PageHeader";
 import StatusBadge from "../../components/common/StatusBadge";
 import Modal from "../../components/common/Modal";
 import EmptyState from "../../components/common/EmptyState";
-import { vehicles } from "../../data/vehiclesData";
+import { useAdminData } from "../../context/AdminDataContext";
 import { toneForScore } from "../../utils/healthStatus";
 import { formatDate, formatKm } from "../../utils/formatters";
 import { Search, Car, Eye } from "lucide-react";
 
 export default function Vehicles() {
+  const { vehicles } = useAdminData();
   const [query, setQuery] = useState("");
   const [selected, setSelected] = useState(null);
 
@@ -89,6 +90,15 @@ export default function Vehicles() {
             <Detail label="Current Mileage" value={formatKm(selected.currentKm)} />
             <Detail label="Health Score" value={`${selected.healthScore}/100 (${selected.healthStatus})`} />
             <Detail label="Last Service" value={formatDate(selected.lastServiceDate)} />
+            {selected.fuelType && <Detail label="Fuel Type" value={selected.fuelType} />}
+            {selected.engineType && <Detail label="Engine Type" value={selected.engineType} />}
+            {selected.purchaseDate && <Detail label="Purchase Date" value={formatDate(selected.purchaseDate)} />}
+            {!!selected.previousOwners && <Detail label="Previous Owners" value={selected.previousOwners} />}
+            {selected.accidentHistory && <Detail label="Accident History" value={selected.accidentHistory} />}
+            {selected.insuranceValidTill && (
+              <Detail label="Insurance Valid Till" value={formatDate(selected.insuranceValidTill)} />
+            )}
+            {selected.pucValidTill && <Detail label="PUC Valid Till" value={formatDate(selected.pucValidTill)} />}
           </div>
         )}
       </Modal>
