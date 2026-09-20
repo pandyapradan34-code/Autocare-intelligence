@@ -3,8 +3,12 @@
   "version": "1.0.0",
   "main": "index.js",
   "scripts": {
+<<<<<<< HEAD
     "start": "node index.js",
     "dev": "nodemon index.js"
+=======
+    "start": "node index.js"
+>>>>>>> 7cd3aa412be1e248915460939da5db11e08f422b
   },
   "keywords": [],
   "author": "",
@@ -12,8 +16,11 @@
   "description": "",
   "dependencies": {
     "express": "^5.2.1"
+<<<<<<< HEAD
   },
   "devDependencies": {
     "nodemon": "^3.1.14"
+=======
+>>>>>>> 7cd3aa412be1e248915460939da5db11e08f422b
   }
 }

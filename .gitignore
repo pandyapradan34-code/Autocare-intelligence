@@ -1,5 +1,11 @@
+<<<<<<< HEAD
 @"
 node_modules/
 dist/
 .env
 "@ | Set-Content .gitignore
+=======
+
+node_modules/
+dist/
+>>>>>>> 7cd3aa412be1e248915460939da5db11e08f422b
