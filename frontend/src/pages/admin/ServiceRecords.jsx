@@ -2,10 +2,12 @@ import { useState } from "react";
 import { Link } from "react-router-dom";
 import PageHeader from "../../components/common/PageHeader";
 import ServiceTable from "../../components/service/ServiceTable";
-import { serviceRecords, serviceTypeOptions } from "../../data/serviceRecordsData";
+import { serviceTypeOptions } from "../../data/serviceRecordsData";
+import { useAdminData } from "../../context/AdminDataContext";
 import { Search, PlusCircle } from "lucide-react";
 
 export default function ServiceRecords() {
+  const { serviceRecords } = useAdminData();
   const [query, setQuery] = useState("");
   const [typeFilter, setTypeFilter] = useState("All");
 
