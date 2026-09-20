@@ -6,6 +6,7 @@ import ComponentDegradationChart from "../../components/charts/ComponentDegradat
 import MileageTrendChart from "../../components/charts/MileageTrendChart";
 import { maintenanceCostTrend } from "../../data/maintenanceData";
 import { repairFrequency, componentDegradation, mileageTrend } from "../../data/chartData";
+import { staggerDelay } from "../../utils/motion";
 
 export default function MaintenanceAnalysis() {
   return (
@@ -13,18 +14,18 @@ export default function MaintenanceAnalysis() {
       <PageHeader title="Maintenance Analysis" description="Fleet-wide trends across cost, repairs, and component wear." />
 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-        <ChartCard title="Maintenance Cost Trend" subtitle="Fleet-wide annual spend">
-          <CostTrendChart data={maintenanceCostTrend} />
-        </ChartCard>
-        <ChartCard title="Repair Frequency by Category" subtitle="Sample vehicle — Honda City VX">
-          <RepairFrequencyChart data={repairFrequency} />
-        </ChartCard>
-        <ChartCard title="Component Degradation" subtitle="Sample vehicle over recent services">
-          <ComponentDegradationChart data={componentDegradation} />
-        </ChartCard>
-        <ChartCard title="Mileage Trend" subtitle="Sample vehicle — Honda City VX">
-          <MileageTrendChart data={mileageTrend} />
-        </ChartCard>
+        {[
+          { title: "Maintenance Cost Trend", subtitle: "Fleet-wide annual spend", Chart: CostTrendChart, data: maintenanceCostTrend },
+          { title: "Repair Frequency by Category", subtitle: "Sample vehicle — Honda City VX", Chart: RepairFrequencyChart, data: repairFrequency },
+          { title: "Component Degradation", subtitle: "Sample vehicle over recent services", Chart: ComponentDegradationChart, data: componentDegradation },
+          { title: "Mileage Trend", subtitle: "Sample vehicle — Honda City VX", Chart: MileageTrendChart, data: mileageTrend },
+        ].map(({ title, subtitle, Chart, data }, i) => (
+          <div key={title} className="animate-fade-in-up" style={staggerDelay(i, 100)}>
+            <ChartCard title={title} subtitle={subtitle}>
+              <Chart data={data} />
+            </ChartCard>
+          </div>
+        ))}
       </div>
     </div>
   );

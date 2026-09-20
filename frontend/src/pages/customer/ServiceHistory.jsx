@@ -4,6 +4,7 @@ import ServiceHistoryCard from "../../components/service/ServiceHistoryCard";
 import EmptyState from "../../components/common/EmptyState";
 import { serviceHistory } from "../../data/serviceHistoryData";
 import { History, Search } from "lucide-react";
+import { staggerDelay } from "../../utils/motion";
 
 export default function ServiceHistory() {
   const [query, setQuery] = useState("");
@@ -24,7 +25,7 @@ export default function ServiceHistory() {
               value={query}
               onChange={(e) => setQuery(e.target.value)}
               placeholder="Search service history..."
-              className="w-64 rounded-lg border border-slate-200 py-2 pl-9 pr-3 text-sm outline-none focus:border-brand-500 focus:ring-2 focus:ring-brand-100"
+              className="w-64 rounded-xl border border-slate-200 py-2 pl-9 pr-3 text-sm outline-none transition-all duration-150 focus:border-brand-400 focus:ring-2 focus:ring-brand-100"
             />
           </div>
         }
@@ -34,8 +35,10 @@ export default function ServiceHistory() {
         <EmptyState icon={History} title="No matching records" description="Try a different search term." />
       ) : (
         <div className="space-y-4">
-          {filtered.map((record) => (
-            <ServiceHistoryCard key={record.id} record={record} />
+          {filtered.map((record, i) => (
+            <div key={record.id} className="animate-fade-in-up" style={staggerDelay(i, 60)}>
+              <ServiceHistoryCard record={record} />
+            </div>
           ))}
         </div>
       )}
