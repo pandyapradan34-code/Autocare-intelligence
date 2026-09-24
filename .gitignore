@@ -2,4 +2,8 @@
 node_modules/
 dist/
 .env
+backend/venv/
+backend/.env
+__pycache__/
+*.pyc
 "@ | Set-Content .gitignore
