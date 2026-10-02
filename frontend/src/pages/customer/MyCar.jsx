@@ -1,72 +1,18 @@
-import { Car, Fuel, Calendar, Hash, ShieldCheck, FileCheck2, Users, AlertTriangle } from "lucide-react";
+import { useEffect, useState } from "react";
+import { Car, Fuel, Calendar, Hash, ShieldCheck, FileCheck2, Users, AlertTriangle, Gauge, LoaderCircle } from "lucide-react";
 import PageHeader from "../../components/common/PageHeader";
 import { currentVehicle } from "../../data/vehicleData";
 import { formatDate, formatKm } from "../../utils/formatters";
-import { staggerDelay } from "../../utils/motion";
-
+const API = import.meta.env.VITE_API_URL || "http://localhost:3000";
 export default function MyCar() {
-  const v = currentVehicle;
-
-  const details = [
-    { label: "Brand", value: v.brand, icon: Car },
-    { label: "Model", value: `${v.model}${v.variant ? ` (${v.variant})` : ""}`, icon: Car },
-    { label: "Manufacturing Year", value: v.manufacturingYear, icon: Calendar },
-    { label: "Purchase Date", value: formatDate(v.purchaseDate), icon: Calendar },
-    { label: "Fuel Type", value: v.fuelType, icon: Fuel },
-    { label: "Engine Type", value: v.engineType, icon: Hash },
-    { label: "Current Kilometers", value: formatKm(v.currentKm), icon: Hash },
-    { label: "Previous Owners", value: v.previousOwners, icon: Users },
-    { label: "Insurance Valid Till", value: formatDate(v.insuranceValidTill), icon: ShieldCheck },
-    { label: "PUC Valid Till", value: formatDate(v.pucValidTill), icon: FileCheck2 },
-  ];
-
-  return (
-    <div>
-      <PageHeader title="My Car" description="Complete profile of your registered vehicle." />
-
-      <div className="mb-6 animate-fade-in-up delay-100">
-        <div className="flex flex-col gap-4 rounded-2xl border border-slate-200 bg-white p-6 shadow-card sm:flex-row sm:items-center sm:justify-between">
-          <div className="flex items-center gap-4">
-            <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-brand-50 text-brand-600">
-              <Car size={28} />
-            </div>
-            <div>
-              <p className="text-lg font-bold text-slate-900">
-                {v.brand} {v.model}
-              </p>
-              <p className="text-sm text-slate-400">
-                {v.color} • Reg. No. {v.registrationNumber}
-              </p>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-        {details.map((d, i) => (
-          <div
-            key={d.label}
-            className="animate-fade-in-up rounded-2xl border border-slate-200 bg-white p-4 shadow-card card-hover-lift"
-            style={staggerDelay(i, 40)}
-          >
-            <div className="mb-2 flex items-center gap-2 text-slate-400">
-              <d.icon size={15} />
-              <span className="text-xs font-medium uppercase tracking-wide">{d.label}</span>
-            </div>
-            <p className="text-sm font-semibold text-slate-800">{d.value}</p>
-          </div>
-        ))}
-      </div>
-
-      <div className="mt-4 animate-fade-in-up delay-500">
-        <div className="flex items-start gap-3 rounded-2xl border border-amber-200 bg-amber-50 p-4">
-          <AlertTriangle size={18} className="mt-0.5 shrink-0 text-amber-600" />
-          <div>
-            <p className="text-sm font-semibold text-amber-700">Accident History</p>
-            <p className="mt-0.5 text-sm text-amber-700/80">{v.accidentHistory}</p>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
+  const [vehicle, setVehicle] = useState(currentVehicle);
+  const [dbVehicle, setDbVehicle] = useState(null);
+  const [odometer, setOdometer] = useState(String(currentVehicle.currentKm));
+  const [message, setMessage] = useState(""); const [error, setError] = useState(""); const [saving, setSaving] = useState(false);
+  useEffect(() => { fetch(`${API}/api/vehicles?registration=${encodeURIComponent(currentVehicle.registrationNumber)}`).then(async r=>{const d=await r.json(); if(!r.ok) throw new Error(d.error||"Could not load vehicle"); return d;}).then(rows=>{ if(rows[0]) { const v=rows[0]; setDbVehicle(v); setVehicle({...currentVehicle, ...v, registrationNumber:v.registration_number, manufacturingYear:v.manufacturing_year, currentKm:v.current_km, accidentHistory:v.accident_history || "No history recorded", purchaseDate:v.purchase_date, fuelType:v.fuel_type, engineType:v.engine_type, previousOwners:v.previous_owners, insuranceValidTill:v.insurance_valid_till, pucValidTill:v.puc_valid_till}); setOdometer(String(v.current_km)); }}).catch(()=>{}); }, []);
+  async function updateOdometer(e) { e.preventDefault(); setError(""); setMessage(""); if(!dbVehicle) { setError("This demo vehicle is not linked to a database record yet. Create/link the vehicle in PostgreSQL first."); return; } setSaving(true); try { const r=await fetch(`${API}/api/vehicles/${dbVehicle.id}/odometer`,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({odometer:Number(odometer)})}); const d=await r.json(); if(!r.ok) throw new Error(d.error||"Could not update odometer"); setVehicle(v=>({...v,currentKm:d.currentKm})); setDbVehicle(v=>({...v,current_km:d.currentKm})); setMessage("Odometer saved. Service and health estimates will use this latest reading."); } catch(e2) {setError(e2.message);} finally {setSaving(false);} }
+  const details = [ { label:"Brand",value:vehicle.brand,icon:Car },{label:"Model",value:`${vehicle.model}${vehicle.variant ? ` (${vehicle.variant})`:""}`,icon:Car},{label:"Manufacturing Year",value:vehicle.manufacturingYear,icon:Calendar},{label:"Purchase Date",value:formatDate(vehicle.purchaseDate),icon:Calendar},{label:"Fuel Type",value:vehicle.fuelType,icon:Fuel},{label:"Engine Type",value:vehicle.engineType,icon:Hash},{label:"Current Kilometers",value:formatKm(vehicle.currentKm),icon:Gauge},{label:"Previous Owners",value:vehicle.previousOwners,icon:Users},{label:"Insurance Valid Till",value:formatDate(vehicle.insuranceValidTill),icon:ShieldCheck},{label:"PUC Valid Till",value:formatDate(vehicle.pucValidTill),icon:FileCheck2} ];
+  return <div><PageHeader title="My Car" description="Vehicle profile and current odometer reading."/><div className="mb-6 flex flex-col gap-4 rounded-2xl border border-slate-200 bg-white p-6 shadow-card sm:flex-row sm:items-center sm:justify-between"><div className="flex items-center gap-4"><div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-brand-50 text-brand-600"><Car size={28}/></div><div><p className="text-lg font-bold text-slate-900">{vehicle.brand} {vehicle.model}</p><p className="text-sm text-slate-400">{vehicle.color} • Reg. No. {vehicle.registrationNumber}</p></div></div></div>
+    <form onSubmit={updateOdometer} className="mb-5 rounded-2xl border border-slate-200 bg-white p-5 shadow-card"><h2 className="font-bold text-slate-900">Update odometer</h2><p className="mt-1 text-sm text-slate-500">Enter the current dashboard reading. Readings lower than the last saved reading are rejected.</p><div className="mt-3 flex flex-col gap-3 sm:flex-row"><input aria-label="Current odometer in kilometres" type="number" min={dbVehicle?.current_km ?? 0} step="1" required value={odometer} onChange={e=>setOdometer(e.target.value)} className="w-full rounded-lg border border-slate-200 px-3 py-2.5 text-sm sm:max-w-xs"/><button disabled={saving||!dbVehicle} className="flex items-center justify-center gap-2 rounded-lg bg-brand-600 px-4 py-2.5 text-sm font-semibold text-white disabled:opacity-50">{saving&&<LoaderCircle size={16} className="animate-spin"/>}Save reading</button></div>{!dbVehicle&&<p className="mt-2 text-xs text-amber-700">Database linking is required to save this demo vehicle's reading.</p>}{message&&<p role="status" className="mt-2 text-sm text-emerald-700">{message}</p>}{error&&<p role="alert" className="mt-2 text-sm text-red-700">{error}</p>}</form>
+    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">{details.map(d=><div key={d.label} className="rounded-2xl border border-slate-200 bg-white p-4 shadow-card"><div className="mb-2 flex items-center gap-2 text-slate-400"><d.icon size={15}/><span className="text-xs font-medium uppercase tracking-wide">{d.label}</span></div><p className="text-sm font-semibold text-slate-800">{d.value || "Not recorded"}</p></div>)}</div><div className="mt-4 flex items-start gap-3 rounded-2xl border border-amber-200 bg-amber-50 p-4"><AlertTriangle size={18} className="mt-0.5 shrink-0 text-amber-600"/><div><p className="text-sm font-semibold text-amber-700">Accident History</p><p className="mt-0.5 text-sm text-amber-700/80">{vehicle.accidentHistory || "Not recorded"}</p></div></div></div>;
 }

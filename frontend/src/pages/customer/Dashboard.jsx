@@ -15,7 +15,6 @@ import { healthOverTime } from "../../data/chartData";
 import { formatKm, formatCurrency } from "../../utils/formatters";
 import { maintenanceCost } from "../../data/maintenanceData";
 
-
 export default function Dashboard() {
   const { user } = useAuth();
   const topComponents = [...componentHealth].sort((a, b) => a.value - b.value).slice(0, 4);
@@ -27,48 +26,38 @@ export default function Dashboard() {
         description="Here's how your vehicle is doing today."
       />
 
-      {/* KPI Cards */}
       <div className="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <StatCard label="Vehicle" value={`${currentVehicle.brand} ${currentVehicle.model}`} icon={Car} tone="brand" index={0} />
-        <StatCard label="Current Mileage" value={formatKm(currentVehicle.currentKm)} icon={Gauge} tone="slate" index={1} />
-        <StatCard label="Maintenance (This Year)" value={formatCurrency(maintenanceCost.total)} icon={Wallet} tone="amber" index={2} />
-        <StatCard label="Open Recommendations" value={recommendations.length} icon={AlertTriangle} tone="red" index={3} />
+        <StatCard label="Vehicle" value={`${currentVehicle.brand} ${currentVehicle.model}`} icon={Car} tone="brand" />
+        <StatCard label="Current Mileage" value={formatKm(currentVehicle.currentKm)} icon={Gauge} tone="slate" />
+        <StatCard label="Maintenance (This Year)" value={formatCurrency(maintenanceCost.total)} icon={Wallet} tone="amber" />
+        <StatCard label="Open Recommendations" value={recommendations.length} icon={AlertTriangle} tone="red" />
       </div>
 
-      {/* Health Score + Chart */}
       <div className="mb-6 grid grid-cols-1 gap-6 lg:grid-cols-5">
-        <div className="animate-fade-in-up lg:col-span-2" style={{ animationDelay: "200ms" }}>
+        <div className="lg:col-span-2">
           <HealthScoreCard score={overallHealth.score} lastUpdated={overallHealth.lastUpdated} />
         </div>
-        <div className="animate-fade-in-up lg:col-span-3" style={{ animationDelay: "260ms" }}>
+        <div className="lg:col-span-3">
           <ChartCard title="Vehicle Health Over Time" subtitle="Annual health score trend" height={220}>
             <HealthTrendChart data={healthOverTime} />
           </ChartCard>
         </div>
       </div>
 
-      {/* Components Needing Attention */}
       <div className="mb-6">
-        <h2 className="animate-fade-in-up mb-3 text-sm font-semibold text-slate-800" style={{ animationDelay: "300ms" }}>
-          Components Needing Attention
-        </h2>
+        <h2 className="mb-3 text-sm font-semibold text-slate-800">Components Needing Attention</h2>
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          {topComponents.map((c, i) => (
-            <ComponentHealthCard key={c.id} component={c} barDelay={i * 80 + 300} animDelay={i * 70 + 360} />
+          {topComponents.map((c) => (
+            <ComponentHealthCard key={c.id} component={c} />
           ))}
         </div>
       </div>
 
-      {/* Top Recommendations */}
       <div>
-        <h2 className="animate-fade-in-up mb-3 text-sm font-semibold text-slate-800" style={{ animationDelay: "500ms" }}>
-          Top Recommendations
-        </h2>
+        <h2 className="mb-3 text-sm font-semibold text-slate-800">Top Recommendations</h2>
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-          {recommendations.slice(0, 4).map((r, i) => (
-            <div key={r.id} className="animate-fade-in-up" style={{ animationDelay: `${540 + i * 80}ms` }}>
-              <RecommendationCard recommendation={r} />
-            </div>
+          {recommendations.slice(0, 4).map((r) => (
+            <RecommendationCard key={r.id} recommendation={r} />
           ))}
         </div>
       </div>

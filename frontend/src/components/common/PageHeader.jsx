@@ -1,10 +1,10 @@
 /**
- * Consistent page title + description + optional right-side actions.
- * Animates in on mount with fade-in-up.
+ * Consistent page title + description + optional right-side actions,
+ * used at the top of every page.
  */
 export default function PageHeader({ title, description, actions = null }) {
   return (
-    <div className="mb-6 flex animate-fade-in-up flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+    <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
       <div>
         <h1 className="text-xl font-bold text-slate-900 sm:text-2xl">{title}</h1>
         {description && <p className="mt-1 text-sm text-slate-500">{description}</p>}

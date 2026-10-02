@@ -1,6 +1,10 @@
 import { CheckCircle2, Wrench } from "lucide-react";
 import { formatCurrency, formatDate, formatKm } from "../../utils/formatters";
 
+/**
+ * Timeline-style card for a single service record — used on the
+ * Service History page so customers can quickly see what work was done.
+ */
 export default function ServiceHistoryCard({ record }) {
   const highlights = [
     record.oilChange && "Engine oil changed",
@@ -17,10 +21,10 @@ export default function ServiceHistoryCard({ record }) {
   ].filter(Boolean);
 
   return (
-    <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-card transition-all duration-200 hover:-translate-y-0.5 hover:shadow-card-elevated">
+    <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-card">
       <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
         <div className="flex items-center gap-2.5">
-          <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-brand-50 text-brand-600">
+          <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-brand-50 text-brand-600">
             <Wrench size={16} />
           </div>
           <div>
@@ -46,7 +50,7 @@ export default function ServiceHistoryCard({ record }) {
       )}
 
       {record.mechanicRemarks && (
-        <p className="rounded-xl bg-slate-50 p-3 text-xs leading-relaxed text-slate-500">
+        <p className="rounded-lg bg-slate-50 p-3 text-xs leading-relaxed text-slate-500">
           "{record.mechanicRemarks}"
         </p>
       )}

@@ -3,12 +3,12 @@ import PageHeader from "../../components/common/PageHeader";
 import StatusBadge from "../../components/common/StatusBadge";
 import Modal from "../../components/common/Modal";
 import EmptyState from "../../components/common/EmptyState";
-import { useAdminData } from "../../context/AdminDataContext";
+import { customers } from "../../data/customerData";
+import { vehicles } from "../../data/vehiclesData";
 import { formatDate } from "../../utils/formatters";
 import { Search, Users, Eye } from "lucide-react";
 
 export default function Customers() {
-  const { customers, vehicles } = useAdminData();
   const [query, setQuery] = useState("");
   const [selected, setSelected] = useState(null);
 
@@ -86,9 +86,6 @@ export default function Customers() {
               <Detail label="Phone" value={selected.phone} />
               <Detail label="Joined" value={formatDate(selected.joinedDate)} />
               <Detail label="Status" value={selected.status} />
-              <div className="col-span-2">
-                <Detail label="Address" value={selected.address || "—"} />
-              </div>
             </div>
             <div>
               <p className="mb-2 text-xs font-medium uppercase tracking-wide text-slate-400">Vehicles</p>

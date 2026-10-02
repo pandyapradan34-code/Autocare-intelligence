@@ -1,634 +1,100 @@
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import PageHeader from "../../components/common/PageHeader";
-import { useAdminData } from "../../context/AdminDataContext";
-import { serviceTypeOptions, mechanicOptions } from "../../data/serviceRecordsData";
-import { cx } from "../../utils/formatters";
-import { CheckCircle2, Users, UserPlus, ArrowLeft, ArrowRight, Check } from "lucide-react";
+import { serviceTypeOptions } from "../../data/serviceRecordsData";
+import { CheckCircle2, AlertCircle, LoaderCircle, Wrench } from "lucide-react";
 
-const CHECK_ITEMS = [
-  { key: "oilChange", label: "Oil Change" },
-  { key: "brakeService", label: "Brake Service" },
-  { key: "batteryReplacement", label: "Battery" },
-  { key: "tyreReplacement", label: "Tyres" },
-  { key: "airFilter", label: "Air Filter" },
-  { key: "coolant", label: "Coolant" },
-  { key: "acService", label: "AC" },
-  { key: "suspensionWork", label: "Suspension" },
-  { key: "engineWork", label: "Engine Work" },
+const API = import.meta.env.VITE_API_URL || "http://localhost:3000";
+const COMPONENTS = [
+  { key: "engine", label: "Engine", note: "Inspection result / symptoms" },
+  { key: "transmission", label: "Transmission", note: "Gear shifting / clutch behaviour" },
+  { key: "brakes", label: "Brakes", note: "Pad wear, noise and braking response" },
+  { key: "suspension", label: "Suspension", note: "Ride, noise and shock absorber check" },
+  { key: "battery", label: "Battery", note: "Battery test result / age" },
+  { key: "tyres", label: "Tyres", note: "Prefer measured tread depth when available" },
+  { key: "ac", label: "AC", note: "Cooling performance / leaks" },
+  { key: "cooling", label: "Cooling System", note: "Coolant, leaks and temperature" },
+  { key: "steering", label: "Steering", note: "Play, alignment and vibration" },
+  { key: "electrical", label: "Electrical System", note: "Lights, charging and fault codes" },
 ];
+const FACTORS = [
+  { key: "roughDriving", label: "Driving style", options: [["never","Never rough"],["rare","Rarely"],["sometimes","Sometimes"],["mostly","Mostly rough"]] },
+  { key: "roadType", label: "Usual road type", options: [["highway","Mostly highway"],["mixed","Mixed"],["city","City traffic"],["rough","Rough / unpaved"]] },
+  { key: "overallCondition", label: "Overall vehicle condition", options: [["excellent","Excellent"],["good","Good"],["fair","Fair"],["poor","Poor"]] },
+  { key: "vibration", label: "Vibration", options: [["none","None"],["slight","Slight"],["moderate","Moderate"],["severe","Severe"]] },
+  { key: "unusualNoise", label: "Unusual noise", options: [["no","No"],["sometimes","Sometimes"],["yes","Yes"]] },
+  { key: "warningLights", label: "Dashboard warning lights", options: [["none","None"],["one","One warning"],["multiple","Multiple warnings"]] },
+  { key: "overheating", label: "Overheating history", options: [["never","Never"],["once","Once"],["frequent","Repeated / frequent"]] },
+  { key: "accidentHistory", label: "Accident history", options: [["none","None known"],["minor","Minor"],["major","Major"]] },
+];
+const emptyComponent = { health: "", action: "inspected", notes: "", cost: "" };
+const blankForm = () => ({ customerId: "", vehicleId: "", odometer: "", serviceDate: new Date().toISOString().slice(0,10), serviceType: "", category: "", cost: "", mechanicId: "", remarks: "", annualKm: "12000", components: Object.fromEntries(COMPONENTS.map(c => [c.key, { ...emptyComponent }])), factors: Object.fromEntries(FACTORS.map(f => [f.key, f.options[0][0]])), parts: [] });
+const fieldClass = "w-full rounded-lg border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-800 outline-none focus:border-brand-500 focus:ring-2 focus:ring-brand-100";
 
-const FUEL_TYPE_OPTIONS = ["Petrol", "Diesel", "CNG", "Electric", "Hybrid"];
-
-const initialCustomerForm = { name: "", phone: "", email: "", address: "" };
-
-const initialVehicleForm = {
-  registrationNumber: "",
-  brand: "",
-  model: "",
-  manufacturingYear: "",
-  purchaseDate: "",
-  fuelType: "",
-  engineType: "",
-  currentKm: "",
-  previousOwners: "",
-  accidentHistory: "",
-  insuranceValidTill: "",
-  pucValidTill: "",
-};
-
-const initialServiceForm = {
-  customerId: "",
-  vehicleId: "",
-  odometer: "",
-  serviceDate: "",
-  serviceType: "",
-  partsReplaced: "",
-  partsRepaired: "",
-  cost: "",
-  mechanic: "",
-  nextServiceDue: "",
-  remarks: "",
-  checks: {},
-};
-
-/**
- * Admin — Add Service Record.
- *
- * Two entry paths:
- *  - "existing": pick an existing customer + their existing vehicle, then
- *    log a service — this is the original Phase 1 flow, unchanged.
- *  - "new": register a brand-new customer and their vehicle first (a short
- *    2-step form), then log the first service for that vehicle. Saving the
- *    customer/vehicle and saving the service are still two separate steps,
- *    matching the required Customer -> Vehicle -> Service flow.
- *
- * Both paths end up calling the same addServiceRecord() from
- * AdminDataContext, and share the same "Service Details" fields below so
- * nothing about that part of the form is duplicated.
- */
 export default function AddService() {
   const navigate = useNavigate();
-  const { customers, vehicles, addCustomer, addVehicle, addServiceRecord, isRegistrationNumberTaken, isCustomerEmailTaken } =
-    useAdminData();
+  const [form, setForm] = useState(blankForm);
+  const [customers, setCustomers] = useState([]);
+  const [vehicles, setVehicles] = useState([]);
+  const [mechanics, setMechanics] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState("");
+  const [success, setSuccess] = useState(null);
+  const customerVehicles = useMemo(() => vehicles.filter(v => String(v.customer_id) === String(form.customerId)), [vehicles, form.customerId]);
 
-  const [mode, setMode] = useState(null); // null | "existing" | "new"
-  const [step, setStep] = useState(1); // only relevant for mode === "new": 1=customer, 2=vehicle, 3=service
+  useEffect(() => {
+    let active = true;
+    Promise.all([fetch(`${API}/api/customers`), fetch(`${API}/api/vehicles`), fetch(`${API}/api/mechanics`)]).then(async ([cr, vr, mr]) => {
+      const cd = await cr.json(); const vd = await vr.json(); const md = mr.ok ? await mr.json() : [];
+      if (!cr.ok) throw new Error(cd.error || "Could not load customers");
+      if (!vr.ok) throw new Error(vd.error || "Could not load vehicles");
+      if (active) { setCustomers(cd); setVehicles(vd); setMechanics(md); }
+    }).catch(e => { if (active) setError(`${e.message}. Check that the backend and PostgreSQL database are running and configured.`); }).finally(() => { if (active) setLoading(false); });
+    return () => { active = false; };
+  }, []);
 
-  const [customerForm, setCustomerForm] = useState(initialCustomerForm);
-  const [vehicleForm, setVehicleForm] = useState(initialVehicleForm);
-  const [serviceForm, setServiceForm] = useState(initialServiceForm);
+  const update = (key, value) => setForm(f => ({ ...f, [key]: value, ...(key === "customerId" ? { vehicleId: "" } : {}) }));
+  const updateComponent = (key, prop, value) => setForm(f => ({ ...f, components: { ...f.components, [key]: { ...f.components[key], [prop]: value } } }));
+  const updateFactor = (key, value) => setForm(f => ({ ...f, factors: { ...f.factors, [key]: value } }));
+  const addPart = () => setForm(f => ({ ...f, parts: [...f.parts, { name: "", action: "replaced", cost: "" }] }));
+  const updatePart = (i, key, value) => setForm(f => ({ ...f, parts: f.parts.map((p, n) => n === i ? { ...p, [key]: value } : p) }));
 
-  const [customerErrors, setCustomerErrors] = useState({});
-  const [vehicleErrors, setVehicleErrors] = useState({});
-  const [serviceErrors, setServiceErrors] = useState({});
-
-  const [savedCustomer, setSavedCustomer] = useState(null);
-  const [savedVehicle, setSavedVehicle] = useState(null);
-  const [submitted, setSubmitted] = useState(false);
-
-  const customerVehicles = vehicles.filter((v) => v.ownerId === serviceForm.customerId);
-
-  function resetAll() {
-    setMode(null);
-    setStep(1);
-    setCustomerForm(initialCustomerForm);
-    setVehicleForm(initialVehicleForm);
-    setServiceForm(initialServiceForm);
-    setCustomerErrors({});
-    setVehicleErrors({});
-    setServiceErrors({});
-    setSavedCustomer(null);
-    setSavedVehicle(null);
-    setSubmitted(false);
+  async function handleSubmit(e) {
+    e.preventDefault(); setError("");
+    if (!form.customerId || !form.vehicleId || !form.serviceDate || !form.serviceType || form.odometer === "" || form.cost === "") { setError("Please fill all required fields: customer, vehicle, date, odometer, service type and total cost."); return; }
+    if (Number(form.cost) < 0 || Number(form.odometer) < 0) { setError("Odometer and cost cannot be negative."); return; }
+    setSaving(true);
+    try {
+      const payload = { ...form, vehicleId: Number(form.vehicleId), mechanicId: form.mechanicId ? Number(form.mechanicId) : null, odometer: Number(form.odometer), cost: Number(form.cost), annualKm: Number(form.annualKm) || 12000, components: Object.fromEntries(Object.entries(form.components).filter(([,v]) => v.health !== "").map(([k,v]) => [k,{...v,health:Number(v.health),cost:Number(v.cost)||0}])), parts: form.parts.filter(p => p.name.trim()).map(p => ({...p,cost:Number(p.cost)||0})) };
+      const response = await fetch(`${API}/api/service-records`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload) });
+      const data = await response.json(); if (!response.ok) throw new Error(data.error || "Could not save service record");
+      setSuccess(data); window.scrollTo({ top: 0, behavior: "smooth" });
+    } catch (e2) { setError(e2.message); } finally { setSaving(false); }
   }
 
-  function updateService(field, value) {
-    setServiceForm((f) => ({ ...f, [field]: value, ...(field === "customerId" ? { vehicleId: "" } : {}) }));
-  }
+  if (success) return <div className="max-w-3xl rounded-2xl border border-emerald-200 bg-white p-8 shadow-card"><div className="mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-emerald-100 text-emerald-700"><CheckCircle2 size={28}/></div><h1 className="text-xl font-bold text-slate-900">Service record saved</h1><p className="mt-2 text-sm text-slate-600">Saved to PostgreSQL. Rule engine recalculated vehicle health and generated recommendations.</p><div className="mt-5 grid gap-3 sm:grid-cols-3"><Metric label="Vehicle health" value={`${success.health.score}/100`} /><Metric label="Health status" value={success.health.status} /><Metric label="Life estimate" value={`${success.health.remainingLife.yearsLow}–${success.health.remainingLife.yearsHigh} yrs`} /></div><p className="mt-4 text-xs text-slate-500">Remaining life is a low-confidence, rule-based planning estimate—not a certified prediction.</p><div className="mt-6 flex flex-wrap gap-3"><button className="rounded-lg border border-slate-200 px-4 py-2 text-sm" onClick={() => { setForm(blankForm()); setSuccess(null); }}>Add another</button><button className="rounded-lg bg-brand-600 px-4 py-2 text-sm font-semibold text-white" onClick={() => navigate("/admin/services")}>View service records</button></div></div>;
 
-  function toggleCheck(key) {
-    setServiceForm((f) => ({ ...f, checks: { ...f.checks, [key]: !f.checks[key] } }));
-  }
-
-  // ---- Existing-customer path ----------------------------------------
-
-  function validateService({ requireSelectors }) {
-    const next = {};
-    if (requireSelectors) {
-      if (!serviceForm.customerId) next.customerId = "Select a customer.";
-      if (!serviceForm.vehicleId) next.vehicleId = "Select a vehicle.";
-    }
-    if (!serviceForm.odometer) next.odometer = "Enter the current odometer reading.";
-    if (!serviceForm.serviceDate) next.serviceDate = "Select a service date.";
-    if (!serviceForm.serviceType) next.serviceType = "Select a service type.";
-    if (!serviceForm.cost) next.cost = "Enter the service cost.";
-    if (!serviceForm.mechanic) next.mechanic = "Select a mechanic.";
-    setServiceErrors(next);
-    return Object.keys(next).length === 0;
-  }
-
-  function handleExistingSubmit(e) {
-    e.preventDefault();
-    if (!validateService({ requireSelectors: true })) return;
-    const customer = customers.find((c) => c.id === serviceForm.customerId);
-    addServiceRecord({ ...serviceForm, customerName: customer?.name || "" });
-    setSubmitted(true);
-  }
-
-  // ---- New-customer path ----------------------------------------------
-
-  function validateCustomer() {
-    const next = {};
-    const name = customerForm.name.trim();
-    const phone = customerForm.phone.trim();
-    const email = customerForm.email.trim();
-    if (!name) next.name = "Enter the customer's name.";
-    if (!phone) next.phone = "Enter a phone number.";
-    if (!email) {
-      next.email = "Enter an email address.";
-    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-      next.email = "Enter a valid email address.";
-    } else if (isCustomerEmailTaken(email)) {
-      next.email = "A customer with this email already exists.";
-    }
-    setCustomerErrors(next);
-    return Object.keys(next).length === 0;
-  }
-
-  function handleCustomerNext(e) {
-    e.preventDefault();
-    if (!validateCustomer()) return;
-    setStep(2);
-  }
-
-  function validateVehicle() {
-    const next = {};
-    const reg = vehicleForm.registrationNumber.trim();
-    if (!reg) {
-      next.registrationNumber = "Enter the registration number.";
-    } else if (isRegistrationNumberTaken(reg)) {
-      next.registrationNumber = "A vehicle with this registration number already exists.";
-    }
-    if (!vehicleForm.brand.trim()) next.brand = "Enter the brand.";
-    if (!vehicleForm.model.trim()) next.model = "Enter the model.";
-    if (!vehicleForm.manufacturingYear) next.manufacturingYear = "Enter the manufacturing year.";
-    if (!vehicleForm.currentKm) next.currentKm = "Enter the current odometer reading.";
-    setVehicleErrors(next);
-    return Object.keys(next).length === 0;
-  }
-
-  function handleVehicleBack(e) {
-    e.preventDefault();
-    setStep(1);
-  }
-
-  function handleSaveCustomerAndVehicle(e) {
-    e.preventDefault();
-    if (!validateVehicle()) return;
-    const customer = addCustomer(customerForm);
-    const vehicle = addVehicle({ ...vehicleForm, ownerId: customer.id, ownerName: customer.name });
-    setSavedCustomer(customer);
-    setSavedVehicle(vehicle);
-    setServiceForm((f) => ({ ...f, odometer: vehicleForm.currentKm }));
-    setStep(3);
-  }
-
-  function handleNewServiceSubmit(e) {
-    e.preventDefault();
-    if (!validateService({ requireSelectors: false })) return;
-    addServiceRecord({ ...serviceForm, vehicleId: savedVehicle.id, customerId: savedCustomer.id, customerName: savedCustomer.name });
-    setSubmitted(true);
-  }
-
-  // ---- Success screen ---------------------------------------------------
-
-  if (submitted) {
-    return (
-      <div className="mx-auto max-w-md rounded-2xl border border-slate-200 bg-white p-8 text-center shadow-card">
-        <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-emerald-100 text-emerald-600">
-          <CheckCircle2 size={28} />
-        </div>
-        <h1 className="text-lg font-bold text-slate-900">
-          {mode === "new" ? "Customer, vehicle & service saved" : "Service record saved"}
-        </h1>
-        <p className="mt-2 text-sm text-slate-500">
-          {mode === "new"
-            ? "The new customer and vehicle are now in the system, and the service has been logged against them."
-            : "The service record has been logged against this vehicle."}
-        </p>
-        <div className="mt-6 flex justify-center gap-3">
-          <button
-            onClick={resetAll}
-            className="rounded-lg border border-slate-200 px-4 py-2 text-sm font-medium text-slate-600 hover:bg-slate-50"
-          >
-            Add Another
-          </button>
-          <button
-            onClick={() => navigate("/admin/services")}
-            className="rounded-lg bg-brand-600 px-4 py-2 text-sm font-medium text-white hover:bg-brand-700"
-          >
-            View Service Records
-          </button>
-        </div>
-      </div>
-    );
-  }
-
-  return (
-    <div>
-      <PageHeader title="Add Service Record" description="Log a new service visit for a customer's vehicle." />
-
-      {!mode && <ModeSelector onSelect={setMode} />}
-
-      {mode === "existing" && (
-        <form onSubmit={handleExistingSubmit} className="max-w-3xl space-y-6 rounded-2xl border border-slate-200 bg-white p-6 shadow-card">
-          <BackToModeSelect onClick={resetAll} />
-
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-            <SelectField
-              label="Select Customer"
-              value={serviceForm.customerId}
-              onChange={(v) => updateService("customerId", v)}
-              options={customers.map((c) => ({ value: c.id, label: c.name }))}
-              error={serviceErrors.customerId}
-            />
-            <SelectField
-              label="Select Vehicle"
-              value={serviceForm.vehicleId}
-              onChange={(v) => updateService("vehicleId", v)}
-              options={customerVehicles.map((v) => ({ value: v.id, label: `${v.brand} ${v.model} (${v.registrationNumber})` }))}
-              error={serviceErrors.vehicleId}
-              disabled={!serviceForm.customerId}
-              placeholder={serviceForm.customerId ? "Select vehicle" : "Select a customer first"}
-            />
-          </div>
-
-          <ServiceDetailsFields form={serviceForm} update={updateService} toggleCheck={toggleCheck} errors={serviceErrors} />
-
-          <div className="flex justify-end gap-3">
-            <button
-              type="button"
-              onClick={() => setServiceForm(initialServiceForm)}
-              className="rounded-lg border border-slate-200 px-4 py-2 text-sm font-medium text-slate-600 hover:bg-slate-50"
-            >
-              Reset
-            </button>
-            <button type="submit" className="rounded-lg bg-brand-600 px-5 py-2 text-sm font-semibold text-white hover:bg-brand-700">
-              Save Service Record
-            </button>
-          </div>
-        </form>
-      )}
-
-      {mode === "new" && (
-        <div className="max-w-3xl space-y-6">
-          <div className="flex items-center justify-between rounded-2xl border border-slate-200 bg-white p-4 shadow-card">
-            <BackToModeSelect onClick={resetAll} />
-            <Stepper step={step} />
-          </div>
-
-          {step === 1 && (
-            <form onSubmit={handleCustomerNext} className="space-y-6 rounded-2xl border border-slate-200 bg-white p-6 shadow-card">
-              <h2 className="text-sm font-semibold text-slate-800">Step 1 — Customer Details</h2>
-              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                <TextField
-                  label="Customer Name"
-                  value={customerForm.name}
-                  onChange={(v) => setCustomerForm((f) => ({ ...f, name: v }))}
-                  error={customerErrors.name}
-                />
-                <TextField
-                  label="Phone Number"
-                  value={customerForm.phone}
-                  onChange={(v) => setCustomerForm((f) => ({ ...f, phone: v }))}
-                  error={customerErrors.phone}
-                  placeholder="+91 98765 43210"
-                />
-                <TextField
-                  label="Email"
-                  type="email"
-                  value={customerForm.email}
-                  onChange={(v) => setCustomerForm((f) => ({ ...f, email: v }))}
-                  error={customerErrors.email}
-                  placeholder="name@example.com"
-                />
-                <TextField
-                  label="Address"
-                  value={customerForm.address}
-                  onChange={(v) => setCustomerForm((f) => ({ ...f, address: v }))}
-                  placeholder="Optional"
-                />
-              </div>
-              <div className="flex justify-end">
-                <button type="submit" className="flex items-center gap-1.5 rounded-lg bg-brand-600 px-5 py-2 text-sm font-semibold text-white hover:bg-brand-700">
-                  Next: Vehicle Details
-                  <ArrowRight size={15} />
-                </button>
-              </div>
-            </form>
-          )}
-
-          {step === 2 && (
-            <form onSubmit={handleSaveCustomerAndVehicle} className="space-y-6 rounded-2xl border border-slate-200 bg-white p-6 shadow-card">
-              <h2 className="text-sm font-semibold text-slate-800">Step 2 — Vehicle Details</h2>
-              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                <TextField
-                  label="Registration Number"
-                  value={vehicleForm.registrationNumber}
-                  onChange={(v) => setVehicleForm((f) => ({ ...f, registrationNumber: v }))}
-                  error={vehicleErrors.registrationNumber}
-                  placeholder="e.g. MH12 AB 4521"
-                />
-                <TextField
-                  label="Brand"
-                  value={vehicleForm.brand}
-                  onChange={(v) => setVehicleForm((f) => ({ ...f, brand: v }))}
-                  error={vehicleErrors.brand}
-                />
-                <TextField
-                  label="Model"
-                  value={vehicleForm.model}
-                  onChange={(v) => setVehicleForm((f) => ({ ...f, model: v }))}
-                  error={vehicleErrors.model}
-                />
-                <TextField
-                  label="Manufacturing Year"
-                  type="number"
-                  value={vehicleForm.manufacturingYear}
-                  onChange={(v) => setVehicleForm((f) => ({ ...f, manufacturingYear: v }))}
-                  error={vehicleErrors.manufacturingYear}
-                />
-                <TextField
-                  label="Purchase Date"
-                  type="date"
-                  value={vehicleForm.purchaseDate}
-                  onChange={(v) => setVehicleForm((f) => ({ ...f, purchaseDate: v }))}
-                />
-                <SelectField
-                  label="Fuel Type"
-                  value={vehicleForm.fuelType}
-                  onChange={(v) => setVehicleForm((f) => ({ ...f, fuelType: v }))}
-                  options={FUEL_TYPE_OPTIONS.map((t) => ({ value: t, label: t }))}
-                />
-                <TextField
-                  label="Engine Type"
-                  value={vehicleForm.engineType}
-                  onChange={(v) => setVehicleForm((f) => ({ ...f, engineType: v }))}
-                  placeholder="e.g. 1.5L i-VTEC, 4-Cylinder"
-                />
-                <TextField
-                  label="Current Kilometers"
-                  type="number"
-                  value={vehicleForm.currentKm}
-                  onChange={(v) => setVehicleForm((f) => ({ ...f, currentKm: v }))}
-                  error={vehicleErrors.currentKm}
-                />
-                <TextField
-                  label="Previous Owners"
-                  type="number"
-                  value={vehicleForm.previousOwners}
-                  onChange={(v) => setVehicleForm((f) => ({ ...f, previousOwners: v }))}
-                  placeholder="0"
-                />
-                <TextField
-                  label="Insurance Expiry Date"
-                  type="date"
-                  value={vehicleForm.insuranceValidTill}
-                  onChange={(v) => setVehicleForm((f) => ({ ...f, insuranceValidTill: v }))}
-                />
-                <TextField
-                  label="PUC Expiry Date"
-                  type="date"
-                  value={vehicleForm.pucValidTill}
-                  onChange={(v) => setVehicleForm((f) => ({ ...f, pucValidTill: v }))}
-                />
-              </div>
-              <TextField
-                label="Accident History"
-                value={vehicleForm.accidentHistory}
-                onChange={(v) => setVehicleForm((f) => ({ ...f, accidentHistory: v }))}
-                placeholder="e.g. None, or details of any past accidents"
-              />
-              <div className="flex justify-between">
-                <button
-                  type="button"
-                  onClick={handleVehicleBack}
-                  className="flex items-center gap-1.5 rounded-lg border border-slate-200 px-4 py-2 text-sm font-medium text-slate-600 hover:bg-slate-50"
-                >
-                  <ArrowLeft size={15} />
-                  Back
-                </button>
-                <button type="submit" className="flex items-center gap-1.5 rounded-lg bg-brand-600 px-5 py-2 text-sm font-semibold text-white hover:bg-brand-700">
-                  Save Customer &amp; Vehicle
-                  <ArrowRight size={15} />
-                </button>
-              </div>
-            </form>
-          )}
-
-          {step === 3 && savedCustomer && savedVehicle && (
-            <form onSubmit={handleNewServiceSubmit} className="space-y-6 rounded-2xl border border-slate-200 bg-white p-6 shadow-card">
-              <h2 className="text-sm font-semibold text-slate-800">Step 3 — Service Details</h2>
-              <div className="rounded-lg bg-brand-50 px-4 py-3 text-sm text-brand-800">
-                <p className="font-medium">{savedCustomer.name}</p>
-                <p className="text-brand-700">
-                  {savedVehicle.brand} {savedVehicle.model} &middot; {savedVehicle.registrationNumber}
-                </p>
-              </div>
-
-              <ServiceDetailsFields form={serviceForm} update={updateService} toggleCheck={toggleCheck} errors={serviceErrors} />
-
-              <div className="flex justify-end gap-3">
-                <button type="submit" className="rounded-lg bg-brand-600 px-5 py-2 text-sm font-semibold text-white hover:bg-brand-700">
-                  Save Service Record
-                </button>
-              </div>
-            </form>
-          )}
-        </div>
-      )}
-    </div>
-  );
+  return <div><PageHeader title="Add Service Record" description="Record service work, assess components and update the vehicle intelligence engine." />
+    {error && <div role="alert" className="mb-5 flex gap-2 rounded-xl border border-red-200 bg-red-50 p-3 text-sm text-red-800"><AlertCircle size={18} className="shrink-0"/><span>{error}</span></div>}
+    {loading ? <div className="rounded-xl border bg-white p-8 text-sm text-slate-600">Loading customers and vehicles…</div> : <form onSubmit={handleSubmit} className="max-w-5xl space-y-6">
+      <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-card"><SectionTitle title="Vehicle & service details" subtitle="Odometer cannot be lower than the latest saved reading."/><div className="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        <Field label="Customer *"><select className={fieldClass} value={form.customerId} onChange={e=>update("customerId",e.target.value)}><option value="">Select customer</option>{customers.map(c=><option key={c.id} value={c.id}>{c.name}</option>)}</select></Field>
+        <Field label="Vehicle *"><select className={fieldClass} value={form.vehicleId} onChange={e=>update("vehicleId",e.target.value)} disabled={!form.customerId}><option value="">Select vehicle</option>{customerVehicles.map(v=><option key={v.id} value={v.id}>{v.brand} {v.model} — {v.registration_number}</option>)}</select></Field>
+        <Field label="Odometer (km) *"><input className={fieldClass} type="number" min="0" step="1" value={form.odometer} onChange={e=>update("odometer",e.target.value)} required/></Field>
+        <Field label="Service date *"><input className={fieldClass} type="date" value={form.serviceDate} onChange={e=>update("serviceDate",e.target.value)} required/></Field>
+        <Field label="Service type *"><select className={fieldClass} value={form.serviceType} onChange={e=>update("serviceType",e.target.value)} required><option value="">Select service type</option>{serviceTypeOptions.map(t=><option key={t}>{t}</option>)}</select></Field>
+        <Field label="Category"><select className={fieldClass} value={form.category} onChange={e=>update("category",e.target.value)}><option value="">Select category</option>{COMPONENTS.map(c=><option key={c.key} value={c.key}>{c.label}</option>)}</select></Field>
+        <Field label="Total service cost (₹) *"><input className={fieldClass} type="number" min="0" step="0.01" value={form.cost} onChange={e=>update("cost",e.target.value)} required/></Field>
+        <Field label="Annual usage (km estimate)"><input className={fieldClass} type="number" min="1000" value={form.annualKm} onChange={e=>update("annualKm",e.target.value)}/></Field>
+        <Field label="Mechanic (optional)"><select className={fieldClass} value={form.mechanicId} onChange={e=>update("mechanicId",e.target.value)}><option value="">Not assigned</option>{mechanics.map(m=><option key={m.id} value={m.id}>{m.name}</option>)}</select><span className="mt-1 block text-xs text-slate-500">Mechanic options come from active mechanic accounts.</span></Field>
+      </div></section>
+      <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-card"><SectionTitle title="Component assessment" subtitle="Only assess components inspected during this visit. Health: 0 = failed/worn, 100 = excellent. Use measured/tested values where possible."/><div className="mt-4 grid gap-4 lg:grid-cols-2">{COMPONENTS.map(c=><div key={c.key} className="rounded-xl border border-slate-200 p-4"><div className="mb-3 flex items-center gap-2 font-semibold text-slate-800"><Wrench size={16} className="text-brand-600"/>{c.label}</div><p className="mb-3 text-xs text-slate-500">{c.note}</p><div className="grid gap-3 sm:grid-cols-2"><Field label="Condition / health score"><select className={fieldClass} value={form.components[c.key].health} onChange={e=>updateComponent(c.key,"health",e.target.value)}><option value="">Not assessed</option><option value="20">20% — Critical / poor</option><option value="40">40% — Needs attention</option><option value="50">50% — Fair / workable</option><option value="60">60% — Good enough, monitor</option><option value="80">80% — Very good</option><option value="95">95% — Excellent</option></select></Field><Field label="Action"><select className={fieldClass} value={form.components[c.key].action} onChange={e=>updateComponent(c.key,"action",e.target.value)}>{[["inspected","Inspected"],["serviced","Serviced"],["repaired","Repaired"],["replaced","Replaced"],["not_touched","Not touched"]].map(([v,l])=><option key={v} value={v}>{l}</option>)}</select></Field><Field label="Component cost (₹)"><input className={fieldClass} type="number" min="0" value={form.components[c.key].cost} onChange={e=>updateComponent(c.key,"cost",e.target.value)} placeholder="0"/></Field><Field label="Notes / symptoms"><input className={fieldClass} value={form.components[c.key].notes} onChange={e=>updateComponent(c.key,"notes",e.target.value)} placeholder="Inspection notes"/></Field></div></div>)}</div></section>
+      <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-card"><SectionTitle title="Driving & condition factors" subtitle="These factors adjust the rule-based score; choose the closest observed condition."/><div className="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">{FACTORS.map(f=><Field key={f.key} label={f.label}><select className={fieldClass} value={form.factors[f.key]} onChange={e=>updateFactor(f.key,e.target.value)}>{f.options.map(([v,l])=><option key={v} value={v}>{l}</option>)}</select></Field>)}</div></section>
+      <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-card"><div className="flex flex-wrap items-center justify-between gap-3"><SectionTitle title="Parts repaired or replaced" subtitle="Record individual part cost for complete vehicle history."/><button type="button" onClick={addPart} className="rounded-lg border border-slate-200 px-3 py-2 text-sm font-medium">+ Add part</button></div>{form.parts.length===0 && <p className="mt-4 text-sm text-slate-500">No individual parts added yet.</p>}<div className="mt-3 space-y-3">{form.parts.map((p,i)=><div key={i} className="grid gap-3 sm:grid-cols-[2fr_1fr_1fr_auto]"><Field label="Part name"><input className={fieldClass} value={p.name} onChange={e=>updatePart(i,"name",e.target.value)} placeholder="e.g. front brake pads"/></Field><Field label="Action"><select className={fieldClass} value={p.action} onChange={e=>updatePart(i,"action",e.target.value)}><option value="replaced">Replaced</option><option value="repaired">Repaired</option></select></Field><Field label="Cost (₹)"><input className={fieldClass} type="number" min="0" value={p.cost} onChange={e=>updatePart(i,"cost",e.target.value)}/></Field><button type="button" onClick={()=>setForm(f=>({...f,parts:f.parts.filter((_,n)=>n!==i)}))} className="self-end rounded-lg border border-red-200 px-3 py-2 text-sm text-red-600">Remove</button></div>)}</div></section>
+      <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-card"><Field label="Mechanic remarks"><textarea className={fieldClass} rows={3} value={form.remarks} onChange={e=>update("remarks",e.target.value)} placeholder="Work performed, findings, customer concerns…"/></Field><div className="mt-5 flex flex-wrap justify-end gap-3"><button type="button" onClick={()=>{setForm(blankForm());setError("")}} className="rounded-lg border border-slate-200 px-4 py-2.5 text-sm">Reset form</button><button disabled={saving} type="submit" className="flex items-center gap-2 rounded-lg bg-brand-600 px-5 py-2.5 text-sm font-semibold text-white hover:bg-brand-700 disabled:opacity-60">{saving&&<LoaderCircle size={16} className="animate-spin"/>}{saving?"Saving & calculating…":"Save & calculate vehicle health"}</button></div></section>
+    </form>}</div>;
 }
-
-// ---- Shared sub-components ------------------------------------------------
-
-function ModeSelector({ onSelect }) {
-  return (
-    <div className="grid max-w-3xl grid-cols-1 gap-4 sm:grid-cols-2">
-      <button
-        onClick={() => onSelect("existing")}
-        className="flex flex-col items-start gap-3 rounded-2xl border border-slate-200 bg-white p-6 text-left shadow-card transition hover:border-brand-300 hover:shadow-card-hover"
-      >
-        <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-brand-50 text-brand-600">
-          <Users size={20} />
-        </div>
-        <div>
-          <p className="text-sm font-semibold text-slate-900">Existing Customer</p>
-          <p className="mt-1 text-xs text-slate-500">Select a customer and one of their existing vehicles.</p>
-        </div>
-      </button>
-
-      <button
-        onClick={() => onSelect("new")}
-        className="flex flex-col items-start gap-3 rounded-2xl border border-slate-200 bg-white p-6 text-left shadow-card transition hover:border-brand-300 hover:shadow-card-hover"
-      >
-        <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-emerald-50 text-emerald-600">
-          <UserPlus size={20} />
-        </div>
-        <div>
-          <p className="text-sm font-semibold text-slate-900">+ New Customer &amp; Vehicle</p>
-          <p className="mt-1 text-xs text-slate-500">Register a new customer and their vehicle, then log the service.</p>
-        </div>
-      </button>
-    </div>
-  );
-}
-
-function BackToModeSelect({ onClick }) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      className="flex items-center gap-1 text-xs font-medium text-slate-400 hover:text-slate-600"
-    >
-      <ArrowLeft size={13} />
-      Change customer type
-    </button>
-  );
-}
-
-function Stepper({ step }) {
-  const steps = ["Customer", "Vehicle", "Service"];
-  return (
-    <div className="flex items-center gap-2">
-      {steps.map((label, i) => {
-        const n = i + 1;
-        const active = n === step;
-        const done = n < step;
-        return (
-          <div key={label} className="flex items-center gap-2">
-            <div
-              className={cx(
-                "flex h-6 w-6 items-center justify-center rounded-full text-[11px] font-semibold",
-                done ? "bg-emerald-500 text-white" : active ? "bg-brand-600 text-white" : "bg-slate-100 text-slate-400"
-              )}
-            >
-              {done ? <Check size={13} /> : n}
-            </div>
-            <span className={cx("text-xs font-medium", active ? "text-slate-800" : "text-slate-400")}>{label}</span>
-            {n < steps.length && <div className="h-px w-6 bg-slate-200" />}
-          </div>
-        );
-      })}
-    </div>
-  );
-}
-
-function ServiceDetailsFields({ form, update, toggleCheck, errors }) {
-  return (
-    <>
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-        <TextField label="Odometer (km)" type="number" value={form.odometer} onChange={(v) => update("odometer", v)} error={errors.odometer} />
-        <TextField label="Service Date" type="date" value={form.serviceDate} onChange={(v) => update("serviceDate", v)} error={errors.serviceDate} />
-        <SelectField
-          label="Service Type"
-          value={form.serviceType}
-          onChange={(v) => update("serviceType", v)}
-          options={serviceTypeOptions.map((t) => ({ value: t, label: t }))}
-          error={errors.serviceType}
-        />
-        <SelectField
-          label="Mechanic"
-          value={form.mechanic}
-          onChange={(v) => update("mechanic", v)}
-          options={mechanicOptions.map((m) => ({ value: m, label: m }))}
-          error={errors.mechanic}
-        />
-        <TextField
-          label="Next Service Due Date"
-          type="date"
-          value={form.nextServiceDue}
-          onChange={(v) => update("nextServiceDue", v)}
-          placeholder="Optional"
-        />
-        <TextField label="Cost (₹)" type="number" value={form.cost} onChange={(v) => update("cost", v)} error={errors.cost} />
-      </div>
-
-      <div>
-        <label className="mb-2 block text-sm font-medium text-slate-700">Work Performed</label>
-        <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
-          {CHECK_ITEMS.map((item) => (
-            <label
-              key={item.key}
-              className="flex items-center gap-2 rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-600 hover:bg-slate-50"
-            >
-              <input
-                type="checkbox"
-                checked={!!form.checks[item.key]}
-                onChange={() => toggleCheck(item.key)}
-                className="h-4 w-4 rounded border-slate-300 text-brand-600 focus:ring-brand-500"
-              />
-              {item.label}
-            </label>
-          ))}
-        </div>
-      </div>
-
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-        <TextField label="Parts Replaced" value={form.partsReplaced} onChange={(v) => update("partsReplaced", v)} placeholder="e.g. Oil Filter, Brake Pads" />
-        <TextField label="Parts Repaired" value={form.partsRepaired} onChange={(v) => update("partsRepaired", v)} placeholder="e.g. Suspension Bushing" />
-      </div>
-
-      <div>
-        <label className="mb-1.5 block text-sm font-medium text-slate-700">Service Description / Remarks</label>
-        <textarea
-          value={form.remarks}
-          onChange={(e) => update("remarks", e.target.value)}
-          rows={3}
-          placeholder="Notes about the work performed..."
-          className="w-full rounded-lg border border-slate-200 p-3 text-sm outline-none focus:border-brand-500 focus:ring-2 focus:ring-brand-100"
-        />
-      </div>
-    </>
-  );
-}
-
-function TextField({ label, value, onChange, error, type = "text", placeholder }) {
-  return (
-    <div>
-      <label className="mb-1.5 block text-sm font-medium text-slate-700">{label}</label>
-      <input
-        type={type}
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
-        placeholder={placeholder}
-        className="w-full rounded-lg border border-slate-200 py-2.5 px-3 text-sm outline-none focus:border-brand-500 focus:ring-2 focus:ring-brand-100"
-      />
-      {error && <p className="mt-1 text-xs text-red-600">{error}</p>}
-    </div>
-  );
-}
-
-function SelectField({ label, value, onChange, options, error, disabled, placeholder = "Select" }) {
-  return (
-    <div>
-      <label className="mb-1.5 block text-sm font-medium text-slate-700">{label}</label>
-      <select
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
-        disabled={disabled}
-        className="w-full rounded-lg border border-slate-200 py-2.5 px-3 text-sm outline-none focus:border-brand-500 focus:ring-2 focus:ring-brand-100 disabled:bg-slate-50 disabled:text-slate-400"
-      >
-        <option value="">{placeholder}</option>
-        {options.map((o) => (
-          <option key={o.value} value={o.value}>
-            {o.label}
-          </option>
-        ))}
-      </select>
-      {error && <p className="mt-1 text-xs text-red-600">{error}</p>}
-    </div>
-  );
-}
+function Field({label,children}) { return <label className="block text-sm font-medium text-slate-700">{label}<div className="mt-1.5">{children}</div></label>; }
+function SectionTitle({title,subtitle}) { return <div><h2 className="text-base font-bold text-slate-900">{title}</h2><p className="mt-1 text-sm text-slate-500">{subtitle}</p></div>; }
+function Metric({label,value}) { return <div className="rounded-xl bg-slate-50 p-4"><p className="text-xs text-slate-500">{label}</p><p className="mt-1 text-lg font-bold text-slate-900">{value}</p></div>; }

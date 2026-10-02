@@ -10,13 +10,8 @@ export default function ComponentHealth() {
         description="Individual health status for every major component of your vehicle."
       />
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-        {componentHealth.map((c, i) => (
-          <ComponentHealthCard
-            key={c.id}
-            component={c}
-            barDelay={i * 80 + 200}
-            animDelay={i * 60}
-          />
+        {componentHealth.map((c) => (
+          <ComponentHealthCard key={c.id} component={c} />
         ))}
       </div>
     </div>
