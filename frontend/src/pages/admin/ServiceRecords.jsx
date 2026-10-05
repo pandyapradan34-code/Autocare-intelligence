@@ -1,3 +1,4 @@
+import { apiFetch } from "../../utils/api";
 import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import PageHeader from "../../components/common/PageHeader";
@@ -13,7 +14,7 @@ export default function ServiceRecords() {
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(true);
   useEffect(() => {
-    fetch(`${API}/api/service-records`).then(async r => { const d = await r.json(); if (!r.ok) throw new Error(d.error || "Could not load service records"); return d; })
+    apiFetch(`${API}/api/service-records`).then(async r => { const d = await r.json(); if (!r.ok) throw new Error(d.error || "Could not load service records"); return d; })
       .then(rows => setRecords(rows.map(r => ({ id:r.id, vehicle:`${r.brand} ${r.model}`, vehicleReg:r.registration_number, customer:r.customer_name, date:r.service_date, serviceType:r.service_type, cost:Number(r.cost), mechanic:r.mechanic_name || "Not assigned", remarks:r.remarks, parts:r.parts, assessments:r.assessments }))))
       .catch(e => setError(`${e.message}. Ensure the backend and database are running.`)).finally(() => setLoading(false));
   }, []);

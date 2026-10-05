@@ -21,6 +21,7 @@ import LifeExpectancy from "./pages/customer/LifeExpectancy";
 import Recommendations from "./pages/customer/Recommendations";
 import MaintenanceCost from "./pages/customer/MaintenanceCost";
 import CustomerProfile from "./pages/customer/Profile";
+import CustomerNotifications from "./pages/customer/Notifications";
 
 import AdminDashboard from "./pages/admin/Dashboard";
 import Customers from "./pages/admin/Customers";
@@ -66,6 +67,7 @@ export default function App() {
           <Route path="recommendations" element={<Recommendations />} />
           <Route path="maintenance" element={<MaintenanceCost />} />
           <Route path="profile" element={<CustomerProfile />} />
+          <Route path="notifications" element={<CustomerNotifications />} />
         </Route>
 
         {/* Admin routes */}

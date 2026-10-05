@@ -90,7 +90,8 @@ CREATE TABLE service_parts (
     id                 INT NOT NULL AUTO_INCREMENT PRIMARY KEY,
     service_record_id  INTEGER     NOT NULL REFERENCES service_records(id) ON DELETE CASCADE,
     part_name          VARCHAR(100) NOT NULL,
-    action             VARCHAR(10) NOT NULL CHECK (action IN ('replaced', 'repaired'))
+    action             VARCHAR(10) NOT NULL CHECK (action IN ('replaced', 'repaired')),
+    cost               DECIMAL(10,2) NOT NULL DEFAULT 0
 );
 CREATE INDEX idx_service_parts_record ON service_parts(service_record_id);
 

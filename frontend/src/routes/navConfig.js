@@ -15,6 +15,7 @@ import {
   Gauge,
   BarChart3,
   FileBarChart,
+  Bell,
 } from "lucide-react";
 
 // Centralized nav item definitions so Sidebar stays a dumb, reusable shell.
@@ -29,6 +30,7 @@ export const customerNavItems = [
   { to: "/customer/life-expectancy", label: "Life Expectancy", icon: TrendingUp },
   { to: "/customer/recommendations", label: "Recommendations", icon: Lightbulb },
   { to: "/customer/maintenance", label: "Maintenance Cost", icon: Wallet },
+  { to: "/customer/notifications", label: "Notifications", icon: Bell },
   { to: "/customer/profile", label: "Profile", icon: UserCircle },
 ];
 
