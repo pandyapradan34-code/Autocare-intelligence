@@ -1,61 +1,81 @@
 import { useState } from "react";
-import { Link } from "react-router-dom";
 import PageHeader from "../../components/common/PageHeader";
-import ServiceTable from "../../components/service/ServiceTable";
-import { serviceRecords, serviceTypeOptions } from "../../data/serviceRecordsData";
-import { Search, PlusCircle } from "lucide-react";
+import useAdminData from "../../hooks/useAdminData";
+import { formatCurrency, formatDate } from "../../utils/formatters";
 
 export default function ServiceRecords() {
-  const [query, setQuery] = useState("");
-  const [typeFilter, setTypeFilter] = useState("All");
+  const { services = [], loading, error } = useAdminData() || {};
+  const [search, setSearch] = useState("");
 
-  const filtered = serviceRecords.filter((r) => {
-    const matchesQuery = `${r.vehicle} ${r.customer} ${r.vehicleReg}`.toLowerCase().includes(query.toLowerCase());
-    const matchesType = typeFilter === "All" || r.serviceType === typeFilter;
-    return matchesQuery && matchesType;
-  });
+  if (loading) {
+    return (
+      <div className="flex min-h-87.5 items-center justify-center">
+        <p className="text-sm text-slate-500">Loading service records...</p>
+      </div>
+    );
+  }
+
+  const safeServices = Array.isArray(services) ? services : [];
+  const rows = safeServices.filter((s) =>
+    `${s?.vehicle || ""} ${s?.customer || ""} ${s?.type || ""}`
+      .toLowerCase()
+      .includes(search.toLowerCase())
+  );
 
   return (
     <div>
-      <PageHeader
-        title="Service Records"
-        description="All service records logged across the fleet."
-        actions={
-          <Link
-            to="/admin/services/add"
-            className="flex items-center gap-1.5 rounded-lg bg-brand-600 px-3.5 py-2 text-sm font-medium text-white hover:bg-brand-700"
-          >
-            <PlusCircle size={15} />
-            Add Service
-          </Link>
-        }
+      <PageHeader title="Service Records" description="Complete fleet maintenance and service history." />
+
+      {error && (
+        <div className="mb-4 rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-600">
+          {String(error)}
+        </div>
+      )}
+
+      <input
+        value={search}
+        onChange={(e) => setSearch(e.target.value)}
+        placeholder="Search vehicle, customer, or service type"
+        className="mb-4 w-full max-w-sm rounded-xl border border-slate-200 px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-blue-100"
       />
 
-      <div className="mb-4 flex flex-col gap-3 sm:flex-row">
-        <div className="relative flex-1">
-          <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
-          <input
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-            placeholder="Search by vehicle, customer, or reg. number..."
-            className="w-full rounded-lg border border-slate-200 py-2 pl-9 pr-3 text-sm outline-none focus:border-brand-500 focus:ring-2 focus:ring-brand-100"
-          />
-        </div>
-        <select
-          value={typeFilter}
-          onChange={(e) => setTypeFilter(e.target.value)}
-          className="rounded-lg border border-slate-200 py-2 px-3 text-sm outline-none focus:border-brand-500 focus:ring-2 focus:ring-brand-100"
-        >
-          <option value="All">All Service Types</option>
-          {serviceTypeOptions.map((t) => (
-            <option key={t} value={t}>
-              {t}
-            </option>
-          ))}
-        </select>
+      <div className="overflow-x-auto rounded-2xl border border-slate-200 bg-white shadow-card">
+        <table className="w-full text-left text-sm">
+          <thead className="bg-slate-50 text-xs text-slate-500">
+            <tr>
+              <th className="p-3">Date</th>
+              <th className="p-3">Vehicle</th>
+              <th className="p-3">Customer</th>
+              <th className="p-3">Service</th>
+              <th className="p-3">Cost</th>
+              <th className="p-3">Status</th>
+            </tr>
+          </thead>
+          <tbody>
+            {rows.map((s, index) => (
+              <tr key={s.id || s._id || index} className="border-t border-slate-100 hover:bg-slate-50/50">
+                <td className="p-3 text-slate-500">{formatDate(s.date)}</td>
+                <td className="p-3 font-medium text-slate-800">{s.vehicle || "Vehicle"}</td>
+                <td className="p-3 text-slate-500">{s.customer || "Customer"}</td>
+                <td className="p-3 text-slate-700">{s.type || "Service"}</td>
+                <td className="p-3 font-semibold text-slate-700">{formatCurrency(s.cost || 0)}</td>
+                <td className="p-3">
+                  <span className="rounded-full bg-emerald-50 px-2 py-0.5 text-xs font-semibold text-emerald-700">
+                    {s.status || "Completed"}
+                  </span>
+                </td>
+              </tr>
+            ))}
+            {rows.length === 0 && (
+              <tr>
+                <td colSpan={6} className="p-6 text-center text-slate-400">
+                  No service records found.
+                </td>
+              </tr>
+            )}
+          </tbody>
+        </table>
       </div>
-
-      <ServiceTable records={filtered} />
     </div>
   );
 }

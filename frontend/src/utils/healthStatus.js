@@ -1,6 +1,6 @@
 // Shared health-status helpers so every component classifies scores identically.
 // Kept in one place so that swapping in a real health-scoring engine later
-// only requires changing this file, not every component that renders a score.
+// only requires changing this file.
 
 export const HEALTH_TONES = {
   excellent: {
@@ -13,6 +13,7 @@ export const HEALTH_TONES = {
     badgeBg: "bg-emerald-100",
     badgeText: "text-emerald-700",
   },
+
   good: {
     label: "Good",
     text: "text-lime-600",
@@ -23,6 +24,7 @@ export const HEALTH_TONES = {
     badgeBg: "bg-lime-100",
     badgeText: "text-lime-700",
   },
+
   moderate: {
     label: "Moderate",
     text: "text-health-moderate",
@@ -33,6 +35,7 @@ export const HEALTH_TONES = {
     badgeBg: "bg-amber-100",
     badgeText: "text-amber-700",
   },
+
   attention: {
     label: "Attention Required",
     text: "text-health-attention",
@@ -43,6 +46,7 @@ export const HEALTH_TONES = {
     badgeBg: "bg-orange-100",
     badgeText: "text-orange-700",
   },
+
   critical: {
     label: "Critical",
     text: "text-health-critical",
@@ -60,6 +64,7 @@ export function toneForScore(score) {
   if (score >= 70) return "good";
   if (score >= 55) return "moderate";
   if (score >= 40) return "attention";
+
   return "critical";
 }
 

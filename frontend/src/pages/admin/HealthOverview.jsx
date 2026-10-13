@@ -1,57 +1,62 @@
-import { useState } from "react";
 import PageHeader from "../../components/common/PageHeader";
-import StatusBadge from "../../components/common/StatusBadge";
-import HealthProgressBar from "../../components/common/HealthProgressBar";
-import EmptyState from "../../components/common/EmptyState";
-import { vehicles } from "../../data/vehiclesData";
-import { toneForScore } from "../../utils/healthStatus";
-import { cx } from "../../utils/formatters";
-import { Gauge } from "lucide-react";
-
-const FILTERS = ["All", "Healthy", "Moderate", "Attention Required", "Critical"];
+import useAdminData from "../../hooks/useAdminData";
+import { healthTone, toneBar, toneText } from "../../data/adminData";
 
 export default function HealthOverview() {
-  const [filter, setFilter] = useState("All");
+  const { vehicles = [], loading, error } = useAdminData() || {};
 
-  const filtered = vehicles.filter((v) => filter === "All" || v.healthStatus === filter);
+  if (loading) {
+    return (
+      <div className="flex min-h-87.5 items-center justify-center">
+        <p className="text-sm text-slate-500">Loading vehicle health overview...</p>
+      </div>
+    );
+  }
+
+  const safeVehicles = Array.isArray(vehicles) ? vehicles : [];
+  const sorted = [...safeVehicles].sort((a, b) => (a?.health || 0) - (b?.health || 0));
 
   return (
     <div>
-      <PageHeader title="Vehicle Health Overview" description="Fleet vehicles grouped and filterable by health status." />
+      <PageHeader title="Vehicle Health Overview" description="Fleet-wide vehicle health, lowest health score first." />
 
-      <div className="mb-5 flex flex-wrap gap-2">
-        {FILTERS.map((f) => (
-          <button
-            key={f}
-            onClick={() => setFilter(f)}
-            className={cx(
-              "rounded-full px-3.5 py-1.5 text-sm font-medium transition-colors",
-              filter === f ? "bg-brand-600 text-white" : "bg-white text-slate-600 border border-slate-200 hover:bg-slate-50"
-            )}
-          >
-            {f}
-          </button>
-        ))}
-      </div>
-
-      {filtered.length === 0 ? (
-        <EmptyState icon={Gauge} title="No vehicles in this category" description="Try a different filter." />
-      ) : (
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {filtered.map((v) => (
-            <div key={v.id} className="rounded-2xl border border-slate-200 bg-white p-5 shadow-card">
-              <div className="mb-3 flex items-start justify-between">
-                <div>
-                  <p className="font-semibold text-slate-900">{v.brand} {v.model}</p>
-                  <p className="text-xs text-slate-400">{v.registrationNumber} • {v.ownerName}</p>
-                </div>
-                <StatusBadge tone={toneForScore(v.healthScore)} />
-              </div>
-              <HealthProgressBar value={v.healthScore} />
-            </div>
-          ))}
+      {error && (
+        <div className="mb-4 rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-600">
+          {String(error)}
         </div>
       )}
+
+      <div className="space-y-3">
+        {sorted.length > 0 ? (
+          sorted.map((v, index) => {
+            const h = Number(v.health ?? 85);
+            const t = healthTone(h);
+            return (
+              <div key={v.id || v._id || index} className="rounded-2xl border border-slate-200 bg-white p-4 shadow-card">
+                <div className="mb-2 flex items-center justify-between">
+                  <p className="text-sm font-medium text-slate-800">
+                    {v.number || "Vehicle"} - {v.brand || ""} {v.model || ""}
+                  </p>
+                  <p className={`text-sm font-semibold ${toneText[t] || "text-emerald-600"}`}>
+                    {h}%
+                  </p>
+                </div>
+                <div className="h-2 rounded-full bg-slate-100">
+                  <div
+                    className={`h-2 rounded-full ${toneBar[t] || "bg-emerald-500"} transition-all duration-300`}
+                    style={{ width: `${Math.min(100, Math.max(0, h))}%` }}
+                  />
+                </div>
+                <p className="mt-2 text-xs text-slate-400">Owner: {v.owner || "Customer"}</p>
+              </div>
+            );
+          })
+        ) : (
+          <div className="rounded-2xl border border-slate-200 bg-white p-8 text-center text-slate-400">
+            No vehicles registered yet.
+          </div>
+        )}
+      </div>
     </div>
   );
 }

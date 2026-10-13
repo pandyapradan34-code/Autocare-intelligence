@@ -1,17 +1,21 @@
-import { Routes, Route, Navigate } from "react-router-dom";
-import { AuthProvider } from "./context/AuthContext";
-import ProtectedRoute from "./routes/ProtectedRoute";
+import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import {
+  SignedIn,
+  SignedOut,
+  RedirectToSignIn,
+  useUser,
+} from "@clerk/clerk-react";
+
+import Landing from "./pages/Landing";
+import SignInPage from "./pages/SignInPage";
+import SignUpPage from "./pages/SignUpPage";
+import RoleRedirect from "./pages/RoleRedirect";
 
 import AuthLayout from "./layouts/AuthLayout";
 import CustomerLayout from "./layouts/CustomerLayout";
 import AdminLayout from "./layouts/AdminLayout";
 
-import Landing from "./pages/Landing";
-import Login from "./pages/auth/Login";
-import Register from "./pages/auth/Register";
-import ForgotPassword from "./pages/auth/ForgotPassword";
-
-import CustomerDashboard from "./pages/customer/Dashboard";
+import CustomerDashboard from "./pages/customer/CustomerDashboard";
 import MyCar from "./pages/customer/MyCar";
 import VehicleHealth from "./pages/customer/VehicleHealth";
 import ComponentHealth from "./pages/customer/ComponentHealth";
@@ -22,7 +26,7 @@ import Recommendations from "./pages/customer/Recommendations";
 import MaintenanceCost from "./pages/customer/MaintenanceCost";
 import CustomerProfile from "./pages/customer/Profile";
 
-import AdminDashboard from "./pages/admin/Dashboard";
+import AdminDashboard from "./pages/admin/AdminDashboard";
 import Customers from "./pages/admin/Customers";
 import Vehicles from "./pages/admin/Vehicles";
 import ServiceRecords from "./pages/admin/ServiceRecords";
@@ -32,65 +36,94 @@ import MaintenanceAnalysis from "./pages/admin/MaintenanceAnalysis";
 import Reports from "./pages/admin/Reports";
 import AdminProfile from "./pages/admin/Profile";
 
-import NotFound from "./pages/NotFound";
+function Private({ children }) {
+  return (
+    <>
+      <SignedIn>{children}</SignedIn>
+      <SignedOut>
+        <RedirectToSignIn signInFallbackRedirectUrl="/redirect" />
+      </SignedOut>
+    </>
+  );
+}
+
+function AdminOnly({ children }) {
+  const { isLoaded, user } = useUser();
+
+  if (!isLoaded) {
+    return (
+      <div className="flex min-h-screen items-center justify-center">
+        <p className="text-sm text-slate-500">Checking permissions...</p>
+      </div>
+    );
+  }
+
+  if (user?.publicMetadata?.role !== "admin") {
+    return <Navigate to="/redirect" replace />;
+  }
+
+  return children;
+}
 
 export default function App() {
   return (
-    <AuthProvider>
+    <BrowserRouter>
       <Routes>
-        {/* Public routes */}
+        {/* Public pages */}
         <Route path="/" element={<Landing />} />
+
         <Route element={<AuthLayout />}>
-          <Route path="/login" element={<Login />} />
-          <Route path="/register" element={<Register />} />
-          <Route path="/forgot-password" element={<ForgotPassword />} />
+          <Route path="/login/*" element={<SignInPage />} />
+          <Route path="/register/*" element={<SignUpPage />} />
         </Route>
 
-        {/* Customer routes */}
+        <Route path="/redirect" element={<RoleRedirect />} />
+
+        {/* Customer pages */}
         <Route
-          path="/customer"
           element={
-            <ProtectedRoute allowedRole="customer">
+            <Private>
               <CustomerLayout />
-            </ProtectedRoute>
+            </Private>
           }
         >
-          <Route index element={<Navigate to="dashboard" replace />} />
-          <Route path="dashboard" element={<CustomerDashboard />} />
-          <Route path="car" element={<MyCar />} />
-          <Route path="health" element={<VehicleHealth />} />
-          <Route path="component-health" element={<ComponentHealth />} />
-          <Route path="service-history" element={<ServiceHistory />} />
-          <Route path="next-service" element={<NextService />} />
-          <Route path="life-expectancy" element={<LifeExpectancy />} />
-          <Route path="recommendations" element={<Recommendations />} />
-          <Route path="maintenance" element={<MaintenanceCost />} />
-          <Route path="profile" element={<CustomerProfile />} />
+          <Route path="/dashboard" element={<CustomerDashboard />} />
+          <Route path="/customer/dashboard" element={<CustomerDashboard />} />
+          <Route path="/customer/car" element={<MyCar />} />
+          <Route path="/customer/health" element={<VehicleHealth />} />
+          <Route path="/customer/component-health" element={<ComponentHealth />} />
+          <Route path="/customer/service-history" element={<ServiceHistory />} />
+          <Route path="/customer/next-service" element={<NextService />} />
+          <Route path="/customer/life-expectancy" element={<LifeExpectancy />} />
+          <Route path="/customer/recommendations" element={<Recommendations />} />
+          <Route path="/customer/maintenance" element={<MaintenanceCost />} />
+          <Route path="/customer/profile" element={<CustomerProfile />} />
         </Route>
 
-        {/* Admin routes */}
+        {/* Admin pages */}
         <Route
-          path="/admin"
           element={
-            <ProtectedRoute allowedRole="admin">
-              <AdminLayout />
-            </ProtectedRoute>
+            <Private>
+              <AdminOnly>
+                <AdminLayout />
+              </AdminOnly>
+            </Private>
           }
         >
-          <Route index element={<Navigate to="dashboard" replace />} />
-          <Route path="dashboard" element={<AdminDashboard />} />
-          <Route path="customers" element={<Customers />} />
-          <Route path="vehicles" element={<Vehicles />} />
-          <Route path="services" element={<ServiceRecords />} />
-          <Route path="services/add" element={<AddService />} />
-          <Route path="health" element={<HealthOverview />} />
-          <Route path="maintenance" element={<MaintenanceAnalysis />} />
-          <Route path="reports" element={<Reports />} />
-          <Route path="profile" element={<AdminProfile />} />
+          <Route path="/admin/dashboard" element={<AdminDashboard />} />
+          <Route path="/admin/customers" element={<Customers />} />
+          <Route path="/admin/vehicles" element={<Vehicles />} />
+          <Route path="/admin/services" element={<ServiceRecords />} />
+          <Route path="/admin/services/add" element={<AddService />} />
+          <Route path="/admin/health" element={<HealthOverview />} />
+          <Route path="/admin/maintenance" element={<MaintenanceAnalysis />} />
+          <Route path="/admin/reports" element={<Reports />} />
+          <Route path="/admin/profile" element={<AdminProfile />} />
         </Route>
 
-        <Route path="*" element={<NotFound />} />
+        {/* Fallback */}
+        <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
-    </AuthProvider>
+    </BrowserRouter>
   );
 }

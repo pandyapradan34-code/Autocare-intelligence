@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Outlet } from "react-router-dom";
-import Sidebar from "../components/common/Sidebar";
 import Navbar from "../components/common/Navbar";
+import Sidebar from "../components/common/Sidebar";
 import { adminNavItems } from "../routes/navConfig";
 
 export default function AdminLayout() {
@@ -16,7 +16,7 @@ export default function AdminLayout() {
         onClose={() => setSidebarOpen(false)}
       />
       <div className="flex min-w-0 flex-1 flex-col">
-        <Navbar onMenuClick={() => setSidebarOpen(true)} profilePath="/admin/profile" />
+        <Navbar onMenuClick={() => setSidebarOpen(true)} />
         <main className="flex-1 p-4 sm:p-6 lg:p-8">
           <Outlet />
         </main>

@@ -5,6 +5,7 @@ const score = { type: Number, min: 0, max: 100, required: true };
 const inspectionSchema = new mongoose.Schema(
   {
     vehicleId: { type: mongoose.Schema.Types.ObjectId, ref: "Vehicle", required: true },
+    clerkUserId: { type: String, required: true, index: true },
     engine: score,
     brakes: score,
     battery: score,

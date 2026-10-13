@@ -1,59 +1,56 @@
-import { createContext, useContext, useState, useEffect, useCallback } from "react";
-import { findUserByCredentials } from "../data/authData";
-
-// Dummy, frontend-only authentication context.
-// Phase 2 will replace this with real session/token-based auth against a backend.
+import { createContext, useContext, useEffect } from "react";
+import {
+  useUser,
+  useAuth as useClerkAuth,
+} from "@clerk/clerk-react";
+import { setTokenGetter } from "../services/api";
 
 const AuthContext = createContext(null);
 
-const STORAGE_KEY = "vhis_auth_user";
-
 export function AuthProvider({ children }) {
-  const [user, setUser] = useState(null);
-  const [initializing, setInitializing] = useState(true);
+  const { user, isLoaded, isSignedIn } = useUser();
+  const { signOut, getToken } = useClerkAuth();
 
   useEffect(() => {
-    try {
-      const stored = sessionStorage.getItem(STORAGE_KEY);
-      if (stored) setUser(JSON.parse(stored));
-    } catch {
-      // ignore malformed storage
+    if (getToken) {
+      setTokenGetter(getToken);
     }
-    setInitializing(false);
-  }, []);
+  }, [getToken]);
 
-  const login = useCallback(({ email, password, role }) => {
-    const found = findUserByCredentials(email, password, role);
-    if (!found) {
-      return { success: false, message: "Invalid email, password, or role." };
-    }
-    setUser(found);
-    try {
-      sessionStorage.setItem(STORAGE_KEY, JSON.stringify(found));
-    } catch {
-      // ignore storage errors (e.g. private browsing)
-    }
-    return { success: true, user: found };
-  }, []);
+  const logout = async () => {
+    await signOut();
+  };
 
-  const logout = useCallback(() => {
-    setUser(null);
-    try {
-      sessionStorage.removeItem(STORAGE_KEY);
-    } catch {
-      // ignore
-    }
-  }, []);
+  const getAuthToken = async () => {
+    return await getToken();
+  };
+
+  const role = user?.publicMetadata?.role || "customer";
+
+  const value = {
+    user,
+    isLoaded,
+    isAuthenticated: Boolean(isSignedIn),
+    role,
+    logout,
+    getAuthToken,
+  };
 
   return (
-    <AuthContext.Provider value={{ user, login, logout, initializing }}>
+    <AuthContext.Provider value={value}>
       {children}
     </AuthContext.Provider>
   );
 }
 
 export function useAuth() {
-  const ctx = useContext(AuthContext);
-  if (!ctx) throw new Error("useAuth must be used within AuthProvider");
-  return ctx;
+  const context = useContext(AuthContext);
+
+  if (context === null) {
+    throw new Error("useAuth must be used inside AuthProvider");
+  }
+
+  return context;
 }
+
+export default AuthContext;
