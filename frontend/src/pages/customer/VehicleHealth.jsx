@@ -1,13 +1,15 @@
 import PageHeader from "../../components/common/PageHeader";
 import HealthScoreCard from "../../components/health/HealthScoreCard";
 import HealthProgressBar from "../../components/common/HealthProgressBar";
+import ComponentHealthCard from "../../components/health/ComponentHealthCard";
 import { overallHealth, healthFactors, healthExplanation } from "../../data/healthData";
+import { componentHealth } from "../../data/componentHealthData";
 import { Lightbulb } from "lucide-react";
 
 export default function VehicleHealth() {
   return (
     <div>
-      <PageHeader title="Vehicle Health" description="A breakdown of what shapes your vehicle's overall health score." />
+      <PageHeader title="Vehicle Health" description="Your vehicle's overall health score, broken down by factor and by component." />
 
       <div className="mb-6">
         <HealthScoreCard score={overallHealth.score} lastUpdated={overallHealth.lastUpdated} />
@@ -25,7 +27,7 @@ export default function VehicleHealth() {
         </div>
       </div>
 
-      <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-card">
+      <div className="mb-6 rounded-2xl border border-slate-200 bg-white p-5 shadow-card">
         <h2 className="mb-4 text-sm font-semibold text-slate-800">Health Score Factors</h2>
         <p className="mb-4 text-xs text-slate-400">
           Future factor weighting shown below — Phase 1 uses static/dummy contribution values only.
@@ -40,6 +42,15 @@ export default function VehicleHealth() {
               </div>
               <HealthProgressBar value={f.contribution} size="sm" />
             </div>
+          ))}
+        </div>
+      </div>
+
+      <div>
+        <h2 className="mb-4 text-sm font-semibold text-slate-800">Component Health</h2>
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+          {componentHealth.map((c) => (
+            <ComponentHealthCard key={c.id} component={c} />
           ))}
         </div>
       </div>

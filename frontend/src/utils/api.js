@@ -9,6 +9,7 @@ let customers = seedCustomers.map((c, i) => ({ id: i + 1, ...c, status: (c.statu
 let vehicles = seedVehicles.map((v, i) => ({ id: i + 1, customer_id: Number(String(v.ownerId).replace('cust-','')) || 1, owner_name: v.ownerName, registration_number: v.registrationNumber, brand: v.brand, model: v.model, manufacturing_year: v.manufacturingYear, current_km: v.currentKm, health_score: v.healthScore, health_status: v.healthStatus, insurance_valid_till: '2027-03-13', last_service_date: v.lastServiceDate, ...v }));
 let services = seedServices.map((s, i) => ({ id: i + 1, vehicle_id: i + 1, customer_id: i + 1, vehicle_reg: s.vehicleReg, registration_number: s.vehicleReg, vehicle: s.vehicle, brand: vehicles[i]?.brand || s.vehicle.split(' ')[0], model: s.vehicle.split(' ').slice(1).join(' '), customer: s.customer, customer_name: s.customer, mechanic_name: s.mechanic, service_date: s.date, date: s.date, service_type: s.serviceType, cost: s.cost, mechanic: s.mechanic, remarks: s.remarks, odometer: vehicles[i]?.current_km || 0, parts: [], ...s }));
 let notifications = [{ id: 1, title: 'Vehicle service record updated', message: 'A sample service record is available in your demo dashboard.', created_at: new Date().toISOString(), read_at: null }];
+console.log('DEBUG vehicles customer_ids:', JSON.stringify(vehicles.map(v => ({ id: v.id, customer_id: v.customer_id, ownerId: v.ownerId }))));
 let nextCustomerId = 20, nextVehicleId = 20, nextServiceId = 100;
 const jsonResponse = (data, status = 200) => new Response(JSON.stringify(data), { status, headers: { 'Content-Type': 'application/json' } });
 const readBody = (options) => { try { return JSON.parse(options?.body || '{}'); } catch { return {}; } };
@@ -18,6 +19,7 @@ export async function apiFetch(input, options = {}) {
   const url = new URL(typeof input === 'string' ? input : input.url, window.location.origin);
   const path = url.pathname.replace(/^\/api/, '');
   const method = (options.method || 'GET').toUpperCase();
+  console.log('DEBUG apiFetch called:', method, path, 'raw input:', typeof input === 'string' ? input : input.url);
   const body = readBody(options);
   let data = null;
 
@@ -44,7 +46,7 @@ export async function apiFetch(input, options = {}) {
     notifications = [{ id: Date.now(), title: 'Service record added', message: `${row.service_type} logged for ${row.vehicle_reg}.`, created_at: new Date().toISOString(), read_at: null }, ...notifications];
     data = { success: true, record: row, ...row, health: { score: Number(vehicle?.health_score || vehicle?.healthScore || 78), status: vehicle?.health_status || vehicle?.healthStatus || 'Good', remainingLife: { yearsLow: 3, yearsHigh: 5 } } };
   } else if (path === '/mechanics' && method === 'GET') data = mechanicOptions.map((name, i) => ({ id: i + 1, name }));
-  else if (path === '/customer/my-vehicles' && method === 'GET') data = vehicles.filter(v => Number(v.customer_id) === 1).map(vehicleRow);
+  else if (path === '/customer/my-vehicles' && method === 'GET') { data = vehicles.filter(v => Number(v.customer_id) === 1).map(vehicleRow); console.log('DEBUG my-vehicles result:', JSON.stringify(data)); }
   else if (path === '/customer/my-services' && method === 'GET') data = services.filter(s => Number(s.vehicle_id) === 1);
   else if (path === '/customer/my-notifications' && method === 'GET') data = notifications;
   else if (/^\/customer\/my-notifications\/\d+\/read$/.test(path) && method === 'PATCH') {

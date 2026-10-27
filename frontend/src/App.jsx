@@ -14,12 +14,9 @@ import ForgotPassword from "./pages/auth/ForgotPassword";
 import CustomerDashboard from "./pages/customer/Dashboard";
 import MyCar from "./pages/customer/MyCar";
 import VehicleHealth from "./pages/customer/VehicleHealth";
-import ComponentHealth from "./pages/customer/ComponentHealth";
 import ServiceHistory from "./pages/customer/ServiceHistory";
 import NextService from "./pages/customer/NextService";
-import LifeExpectancy from "./pages/customer/LifeExpectancy";
 import Recommendations from "./pages/customer/Recommendations";
-import MaintenanceCost from "./pages/customer/MaintenanceCost";
 import CustomerProfile from "./pages/customer/Profile";
 import CustomerNotifications from "./pages/customer/Notifications";
 
@@ -28,8 +25,6 @@ import Customers from "./pages/admin/Customers";
 import Vehicles from "./pages/admin/Vehicles";
 import ServiceRecords from "./pages/admin/ServiceRecords";
 import AddService from "./pages/admin/AddService";
-import HealthOverview from "./pages/admin/HealthOverview";
-import MaintenanceAnalysis from "./pages/admin/MaintenanceAnalysis";
 import Reports from "./pages/admin/Reports";
 import AdminProfile from "./pages/admin/Profile";
 
@@ -60,12 +55,9 @@ export default function App() {
           <Route path="dashboard" element={<CustomerDashboard />} />
           <Route path="car" element={<MyCar />} />
           <Route path="health" element={<VehicleHealth />} />
-          <Route path="component-health" element={<ComponentHealth />} />
           <Route path="service-history" element={<ServiceHistory />} />
           <Route path="next-service" element={<NextService />} />
-          <Route path="life-expectancy" element={<LifeExpectancy />} />
           <Route path="recommendations" element={<Recommendations />} />
-          <Route path="maintenance" element={<MaintenanceCost />} />
           <Route path="profile" element={<CustomerProfile />} />
           <Route path="notifications" element={<CustomerNotifications />} />
         </Route>
@@ -85,8 +77,6 @@ export default function App() {
           <Route path="vehicles" element={<Vehicles />} />
           <Route path="services" element={<ServiceRecords />} />
           <Route path="services/add" element={<AddService />} />
-          <Route path="health" element={<HealthOverview />} />
-          <Route path="maintenance" element={<MaintenanceAnalysis />} />
           <Route path="reports" element={<Reports />} />
           <Route path="profile" element={<AdminProfile />} />
         </Route>
